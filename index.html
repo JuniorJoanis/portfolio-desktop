@@ -38,6 +38,8 @@
         background-color: #0f172a;
         color: #f8fafc;
         overscroll-behavior: none;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
       }
       
       /* Custom Scrollbar for Windows */
@@ -58,6 +60,14 @@
 
       .window-shadow {
         box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.5);
+      }
+
+      .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      .scrollbar-hide::-webkit-scrollbar {
+        display: none;
       }
     </style>
 </head>

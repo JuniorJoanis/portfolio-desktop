@@ -9,19 +9,19 @@ const Resume: React.FC = () => {
   return (
     <div className="h-full bg-[#525659] overflow-y-auto w-full">
       <div className="min-h-full flex justify-center p-4 md:p-8">
-        <div className="bg-white text-black w-full max-w-[800px] min-h-[1000px] h-fit shadow-2xl p-8 md:p-12 font-sans text-sm relative">
+        <div className="bg-white text-black w-full max-w-[800px] min-h-[1000px] h-fit shadow-2xl p-4 md:p-8 lg:p-12 font-sans text-xs md:text-sm relative">
           {/* Header */}
-          <div className="border-b-2 border-gray-800 pb-6 mb-6 flex justify-between items-start">
+          <div className="border-b-2 border-gray-800 pb-4 md:pb-6 mb-4 md:mb-6 flex flex-col md:flex-row justify-between items-start gap-4 md:gap-0">
             <div>
-              <h1 className="text-3xl font-bold uppercase tracking-wider mb-2">{BIO.name}</h1>
-              <h2 className="text-lg font-medium text-gray-600">CTO & Full-stack Engineer</h2>
+              <h1 className="text-2xl md:text-3xl font-bold uppercase tracking-wider mb-1 md:mb-2">{BIO.name}</h1>
+              <h2 className="text-base md:text-lg font-medium text-gray-600">CTO & Full-stack Engineer</h2>
             </div>
-            <div className="text-right text-xs space-y-1">
-              <div className="flex items-center justify-end gap-2">
+            <div className="text-left md:text-right text-xs space-y-1 w-full md:w-auto">
+              <div className="flex items-center md:justify-end gap-2">
                 <Mail size={12} /> 
                 <a 
                   href={getEmailMailtoLink()}
-                  className="hover:underline"
+                  className="hover:underline break-all"
                   onClick={(e) => {
                     e.preventDefault();
                     window.location.href = getEmailMailtoLink();
@@ -30,14 +30,14 @@ const Resume: React.FC = () => {
                   {email}
                 </a>
               </div>
-              <div className="flex items-center justify-end gap-2">
+              <div className="flex items-center md:justify-end gap-2">
                 <MapPin size={12} /> Amsterdam / Paris
               </div>
-              <div className="mt-2 flex items-center justify-end">
+              <div className="mt-2 flex items-center md:justify-end">
                 <a 
                   href="/resume.pdf"
                   download="resume.pdf"
-                  className="flex items-center gap-1.5 text-blue-600 font-bold hover:text-blue-700 transition-colors group"
+                  className="flex items-center gap-1.5 text-blue-600 font-bold hover:text-blue-700 active:text-blue-800 transition-colors group touch-manipulation"
                 >
                   <Download size={14} className="group-hover:translate-y-0.5 transition-transform" />
                   <span className="hover:underline">Download PDF</span>

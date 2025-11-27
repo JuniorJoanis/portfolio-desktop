@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Hash, Search, Bell, Info, Smile, Paperclip, Send, Clock } from 'lucide-react';
+import { Hash, Search, Bell, Info, Smile, Paperclip, Send, Clock, Menu, X } from 'lucide-react';
 
 // Mock Data Types
 type User = {
@@ -368,6 +368,20 @@ const Slack: React.FC = () => {
   const [activeChannelId, setActiveChannelId] = useState('product');
   const [activeDMUserId, setActiveDMUserId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'channel' | 'dm'>('channel');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+      if (window.innerWidth >= 768) {
+        setSidebarOpen(false); // Auto-close sidebar when switching to desktop
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   
   const activeChannel = CHANNELS.find(c => c.id === activeChannelId) || CHANNELS[0];
   const activeDM = activeDMUserId ? DIRECT_MESSAGES[activeDMUserId] : null;
@@ -378,22 +392,44 @@ const Slack: React.FC = () => {
     setActiveChannelId(channelId);
     setViewMode('channel');
     setActiveDMUserId(null);
+    if (isMobile) setSidebarOpen(false); // Close sidebar on mobile after selection
   };
   
   const handleDMClick = (userId: string) => {
     setActiveDMUserId(userId);
     setViewMode('dm');
     setActiveChannelId('');
+    if (isMobile) setSidebarOpen(false); // Close sidebar on mobile after selection
   };
 
   return (
-    <div className="flex h-full bg-[#1A1D21] text-[#D1D2D3] font-sans overflow-hidden">
+    <div className="flex h-full bg-[#1A1D21] text-[#D1D2D3] font-sans overflow-hidden relative">
       
+      {/* Mobile Sidebar Overlay */}
+      {isMobile && sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <div className="w-[260px] bg-[#3F0E40] flex flex-col flex-shrink-0">
+      <div className={`
+        ${isMobile ? 'fixed left-0 top-0 bottom-0 z-50 transform transition-transform duration-300' : 'relative'}
+        ${sidebarOpen ? 'translate-x-0' : isMobile ? '-translate-x-full' : ''}
+        w-[260px] md:w-[260px] bg-[#3F0E40] flex flex-col flex-shrink-0 h-full
+      `}>
         {/* Workspace Header */}
-        <div className="window-drag-handle h-12 flex items-center px-4 font-bold text-white border-b border-white/10 hover:bg-[#350d36] transition-colors cursor-pointer">
-          Junior's Workspace <span className="ml-1 text-[10px] opacity-70">▼</span>
+        <div className="window-drag-handle h-12 flex items-center justify-between px-4 font-bold text-white border-b border-white/10 hover:bg-[#350d36] transition-colors cursor-pointer">
+          <span>Junior's Workspace <span className="ml-1 text-[10px] opacity-70">▼</span></span>
+          {isMobile && (
+            <button 
+              onClick={() => setSidebarOpen(false)}
+              className="p-1 hover:bg-white/10 rounded"
+            >
+              <X size={18} />
+            </button>
+          )}
         </div>
 
         {/* Scrollable Area */}
@@ -409,11 +445,11 @@ const Slack: React.FC = () => {
                 key={channel.id}
                 onClick={() => handleChannelClick(channel.id)}
                 className={`
-                  px-4 py-1 flex items-center cursor-pointer mb-[2px]
-                  ${viewMode === 'channel' && activeChannelId === channel.id ? 'bg-[#1164A3] text-white' : 'text-[#D1D2D3]/80 hover:bg-[#350d36]'}
+                  px-4 py-2 md:py-1 flex items-center cursor-pointer mb-[2px] touch-manipulation
+                  ${viewMode === 'channel' && activeChannelId === channel.id ? 'bg-[#1164A3] text-white' : 'text-[#D1D2D3]/80 hover:bg-[#350d36] active:bg-[#350d36]'}
                 `}
               >
-                <Hash size={14} className="mr-2 opacity-70" />
+                <Hash size={14} className="mr-2 opacity-70 flex-shrink-0" />
                 <span className="truncate">{channel.name}</span>
               </div>
             ))}
@@ -429,12 +465,12 @@ const Slack: React.FC = () => {
                 key={user.id} 
                 onClick={() => handleDMClick(user.id)}
                 className={`
-                  px-4 py-1 flex items-center gap-2 cursor-pointer mb-[2px]
-                  ${viewMode === 'dm' && activeDMUserId === user.id ? 'bg-[#1164A3] text-white' : 'text-[#D1D2D3]/80 hover:bg-[#350d36]'}
+                  px-4 py-2 md:py-1 flex items-center gap-2 cursor-pointer mb-[2px] touch-manipulation
+                  ${viewMode === 'dm' && activeDMUserId === user.id ? 'bg-[#1164A3] text-white' : 'text-[#D1D2D3]/80 hover:bg-[#350d36] active:bg-[#350d36]'}
                 `}
               >
-                <div className="relative">
-                    <div className="w-4 h-4 rounded bg-white/10 flex items-center justify-center text-[8px]">{user.avatar}</div>
+                <div className="relative flex-shrink-0">
+                    <div className="w-5 h-5 md:w-4 md:h-4 rounded bg-white/10 flex items-center justify-center text-[9px] md:text-[8px]">{user.avatar}</div>
                     <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 border-2 border-[#3F0E40] rounded-full ${user.status === 'online' ? 'bg-green-500' : user.status === 'busy' ? 'bg-red-500' : 'border-2 border-white/30'}`}></div>
                 </div>
                 <span className="truncate opacity-90">{user.name.split(' ')[0]}</span>
@@ -448,32 +484,40 @@ const Slack: React.FC = () => {
       <div className="flex-1 flex flex-col min-w-0 bg-[#1A1D21]">
         
         {/* Header */}
-        <div className="window-drag-handle h-12 border-b border-white/10 flex items-center justify-between px-4 flex-shrink-0">
-          <div className="font-bold flex items-center gap-2 text-white">
+        <div className="window-drag-handle h-12 border-b border-white/10 flex items-center justify-between px-2 md:px-4 flex-shrink-0">
+          <div className="font-bold flex items-center gap-2 text-white min-w-0 flex-1">
+            {isMobile && (
+              <button 
+                onClick={() => setSidebarOpen(true)}
+                className="p-2 hover:bg-white/10 rounded mr-1 flex-shrink-0"
+              >
+                <Menu size={20} />
+              </button>
+            )}
             {viewMode === 'channel' ? (
               <>
-                <Hash size={16} className="text-white/50" />
-                {activeChannel.name} 
-                <span className="text-[10px] px-2 text-white/40 font-normal hidden md:inline truncate max-w-[300px]">{activeChannel.topic}</span>
+                <Hash size={16} className="text-white/50 flex-shrink-0" />
+                <span className="truncate">{activeChannel.name}</span> 
+                <span className="text-[10px] px-2 text-white/40 font-normal hidden lg:inline truncate max-w-[300px]">{activeChannel.topic}</span>
               </>
             ) : (
               <>
-                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white">
+                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
                   {activeDMUser?.avatar}
                 </div>
-                <span>{activeDMUser?.name}</span>
+                <span className="truncate">{activeDMUser?.name}</span>
                 {activeDMUser?.status === 'online' && (
-                  <span className="text-[10px] text-green-400">●</span>
+                  <span className="text-[10px] text-green-400 flex-shrink-0">●</span>
                 )}
                 {activeDMUser?.status === 'busy' && (
-                  <span className="text-[10px] text-red-400">●</span>
+                  <span className="text-[10px] text-red-400 flex-shrink-0">●</span>
                 )}
               </>
             )}
           </div>
           
-          <div className="flex items-center gap-4 text-white/60">
-             {viewMode === 'channel' && (
+          <div className="flex items-center gap-2 md:gap-4 text-white/60 flex-shrink-0">
+             {viewMode === 'channel' && !isMobile && (
                <div className="flex -space-x-2">
                   {Object.values(USERS).slice(0, 3).map(u => (
                       <div key={u.id} className="w-6 h-6 rounded bg-white/10 border border-[#1A1D21] flex items-center justify-center text-[9px] text-white">{u.avatar}</div>
@@ -481,21 +525,23 @@ const Slack: React.FC = () => {
                   <div className="w-6 h-6 rounded bg-white/5 border border-[#1A1D21] flex items-center justify-center text-[9px] text-white">+2</div>
                </div>
              )}
-             <Info size={18} />
+             <button className="p-1.5 hover:bg-white/10 rounded touch-manipulation">
+               <Info size={18} />
+             </button>
           </div>
         </div>
 
         {/* Message List */}
-        <div className="flex-1 overflow-y-auto px-4 py-6 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto px-2 md:px-4 py-4 md:py-6 custom-scrollbar">
           {viewMode === 'channel' ? (
             <>
               {/* Welcome Message */}
-              <div className="mb-8 pb-8 border-b border-white/10">
-                <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mb-4">
-                    <Hash size={32} />
+              <div className="mb-6 md:mb-8 pb-6 md:pb-8 border-b border-white/10">
+                <div className="w-12 h-12 md:w-16 md:h-16 bg-white/5 rounded-2xl flex items-center justify-center mb-3 md:mb-4">
+                    <Hash size={24} className="md:w-8 md:h-8" />
                 </div>
-                <h1 className="text-2xl font-bold text-white mb-2">Welcome to #{activeChannel.name}!</h1>
-                <p className="text-white/60">
+                <h1 className="text-xl md:text-2xl font-bold text-white mb-2">Welcome to #{activeChannel.name}!</h1>
+                <p className="text-sm md:text-base text-white/60">
                   This is the start of the <span className="font-bold text-[#1164A3]">#{activeChannel.name}</span> channel. 
                   {activeChannel.topic}.
                 </p>
@@ -507,31 +553,31 @@ const Slack: React.FC = () => {
                 const showHeader = idx === 0 || activeChannel.messages[idx - 1].userId !== msg.userId;
 
                 return (
-                  <div key={msg.id} className={`group flex gap-3 ${showHeader ? 'mt-4' : 'mt-1'} py-1 hover:bg-[#222529] -mx-4 px-4 transition-colors`}>
+                  <div key={msg.id} className={`group flex gap-2 md:gap-3 ${showHeader ? 'mt-4' : 'mt-1'} py-1 hover:bg-[#222529] -mx-2 md:-mx-4 px-2 md:px-4 transition-colors`}>
                     {showHeader ? (
-                      <div className="w-9 h-9 rounded bg-gradient-to-br from-blue-500 to-purple-600 flex-shrink-0 flex items-center justify-center text-xs font-bold text-white">
+                      <div className="w-8 h-8 md:w-9 md:h-9 rounded bg-gradient-to-br from-blue-500 to-purple-600 flex-shrink-0 flex items-center justify-center text-[10px] md:text-xs font-bold text-white">
                         {user.avatar}
                       </div>
                     ) : (
-                      <div className="w-9 flex-shrink-0 text-[10px] text-white/20 text-right opacity-0 group-hover:opacity-100 select-none pt-1">
+                      <div className="w-8 md:w-9 flex-shrink-0 text-[9px] md:text-[10px] text-white/20 text-right opacity-0 group-hover:opacity-100 select-none pt-1">
                         {msg.timestamp.split(' ')[0]}
                       </div>
                     )}
                     
                     <div className="flex-1 min-w-0">
                       {showHeader && (
-                        <div className="flex items-baseline gap-2">
-                          <span className="font-bold text-white">{user.name}</span>
-                          <span className="text-xs text-white/40">{msg.timestamp}</span>
+                        <div className="flex items-baseline gap-2 flex-wrap">
+                          <span className="font-bold text-white text-sm md:text-base">{user.name}</span>
+                          <span className="text-[10px] md:text-xs text-white/40">{msg.timestamp}</span>
                         </div>
                       )}
-                      <p className="text-[#D1D2D3] leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                      <p className="text-[#D1D2D3] leading-relaxed whitespace-pre-wrap text-sm md:text-base">{msg.content}</p>
                       
                       {/* Reactions */}
                       {msg.reactions && (
-                        <div className="flex gap-1 mt-1">
+                        <div className="flex gap-1 mt-1 flex-wrap">
                             {msg.reactions.map((r, i) => (
-                                <div key={i} className="bg-[#222529] border border-white/10 rounded-full px-1.5 py-0.5 text-xs flex items-center gap-1 cursor-pointer hover:bg-white/5 hover:border-white/30 transition-all">
+                                <div key={i} className="bg-[#222529] border border-white/10 rounded-full px-1.5 py-0.5 text-[10px] md:text-xs flex items-center gap-1 cursor-pointer hover:bg-white/5 hover:border-white/30 transition-all touch-manipulation">
                                     <span>{r.emoji}</span>
                                     <span className="text-blue-400 font-medium">{r.count}</span>
                                 </div>
@@ -547,12 +593,12 @@ const Slack: React.FC = () => {
             <>
               {/* DM Welcome */}
               {activeDMUser && (
-                <div className="mb-8 pb-8 border-b border-white/10">
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mb-4">
-                    <span className="text-2xl font-bold text-white">{activeDMUser.avatar}</span>
+                <div className="mb-6 md:mb-8 pb-6 md:pb-8 border-b border-white/10">
+                  <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mb-3 md:mb-4">
+                    <span className="text-xl md:text-2xl font-bold text-white">{activeDMUser.avatar}</span>
                   </div>
-                  <h1 className="text-2xl font-bold text-white mb-2">{activeDMUser.name}</h1>
-                  <p className="text-white/60">
+                  <h1 className="text-xl md:text-2xl font-bold text-white mb-2">{activeDMUser.name}</h1>
+                  <p className="text-sm md:text-base text-white/60">
                     {activeDMUser.status === 'online' && 'Active now'}
                     {activeDMUser.status === 'busy' && 'Busy'}
                     {activeDMUser.status === 'offline' && 'Away'}
@@ -566,31 +612,31 @@ const Slack: React.FC = () => {
                 const showHeader = idx === 0 || activeDM[idx - 1].userId !== msg.userId;
 
                 return (
-                  <div key={msg.id} className={`group flex gap-3 ${showHeader ? 'mt-4' : 'mt-1'} py-1 hover:bg-[#222529] -mx-4 px-4 transition-colors`}>
+                  <div key={msg.id} className={`group flex gap-2 md:gap-3 ${showHeader ? 'mt-4' : 'mt-1'} py-1 hover:bg-[#222529] -mx-2 md:-mx-4 px-2 md:px-4 transition-colors`}>
                     {showHeader ? (
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex-shrink-0 flex items-center justify-center text-xs font-bold text-white">
+                      <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex-shrink-0 flex items-center justify-center text-[10px] md:text-xs font-bold text-white">
                         {user.avatar}
                       </div>
                     ) : (
-                      <div className="w-9 flex-shrink-0 text-[10px] text-white/20 text-right opacity-0 group-hover:opacity-100 select-none pt-1">
+                      <div className="w-8 md:w-9 flex-shrink-0 text-[9px] md:text-[10px] text-white/20 text-right opacity-0 group-hover:opacity-100 select-none pt-1">
                         {msg.timestamp.split(' ')[0]}
                       </div>
                     )}
                     
                     <div className="flex-1 min-w-0">
                       {showHeader && (
-                        <div className="flex items-baseline gap-2">
-                          <span className="font-bold text-white">{user.name}</span>
-                          <span className="text-xs text-white/40">{msg.timestamp}</span>
+                        <div className="flex items-baseline gap-2 flex-wrap">
+                          <span className="font-bold text-white text-sm md:text-base">{user.name}</span>
+                          <span className="text-[10px] md:text-xs text-white/40">{msg.timestamp}</span>
                         </div>
                       )}
-                      <p className="text-[#D1D2D3] leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                      <p className="text-[#D1D2D3] leading-relaxed whitespace-pre-wrap text-sm md:text-base">{msg.content}</p>
                       
                       {/* Reactions */}
                       {msg.reactions && (
-                        <div className="flex gap-1 mt-1">
+                        <div className="flex gap-1 mt-1 flex-wrap">
                             {msg.reactions.map((r, i) => (
-                                <div key={i} className="bg-[#222529] border border-white/10 rounded-full px-1.5 py-0.5 text-xs flex items-center gap-1 cursor-pointer hover:bg-white/5 hover:border-white/30 transition-all">
+                                <div key={i} className="bg-[#222529] border border-white/10 rounded-full px-1.5 py-0.5 text-[10px] md:text-xs flex items-center gap-1 cursor-pointer hover:bg-white/5 hover:border-white/30 transition-all touch-manipulation">
                                     <span>{r.emoji}</span>
                                     <span className="text-blue-400 font-medium">{r.count}</span>
                                 </div>
@@ -607,30 +653,30 @@ const Slack: React.FC = () => {
         </div>
 
         {/* Input Area */}
-        <div className="px-4 pb-4 pt-2">
+        <div className="px-2 md:px-4 pb-3 md:pb-4 pt-2">
           <div className="border border-white/20 rounded-lg bg-[#222529] overflow-hidden focus-within:border-white/40 transition-colors">
-            {/* Toolbar */}
-            <div className="flex items-center gap-1 p-1 bg-[#222529] border-b border-white/5">
-                <button className="p-1 hover:bg-white/5 rounded text-white/60"><span className="font-bold">B</span></button>
-                <button className="p-1 hover:bg-white/5 rounded text-white/60"><span className="italic">I</span></button>
-                <button className="p-1 hover:bg-white/5 rounded text-white/60"><span className="line-through">S</span></button>
+            {/* Toolbar - Hidden on mobile */}
+            <div className="hidden md:flex items-center gap-1 p-1 bg-[#222529] border-b border-white/5">
+                <button className="p-1 hover:bg-white/5 rounded text-white/60 touch-manipulation"><span className="font-bold">B</span></button>
+                <button className="p-1 hover:bg-white/5 rounded text-white/60 touch-manipulation"><span className="italic">I</span></button>
+                <button className="p-1 hover:bg-white/5 rounded text-white/60 touch-manipulation"><span className="line-through">S</span></button>
             </div>
             
-            <div className="p-2 min-h-[40px] text-white/40 text-sm">
+            <div className="p-2 md:p-2 min-h-[36px] md:min-h-[40px] text-white/40 text-xs md:text-sm flex items-center">
                 {viewMode === 'channel' ? `Message #${activeChannel.name}` : `Message ${activeDMUser?.name || ''}`}
             </div>
             
-            <div className="flex justify-between items-center p-1 bg-[#222529]">
-                <div className="flex gap-2">
-                    <button className="p-1.5 hover:bg-white/5 rounded-full text-white/60"><Paperclip size={16}/></button>
-                    <button className="p-1.5 hover:bg-white/5 rounded-full text-white/60"><Smile size={16}/></button>
+            <div className="flex justify-between items-center p-1.5 md:p-1 bg-[#222529]">
+                <div className="flex gap-1 md:gap-2">
+                    <button className="p-1.5 md:p-1.5 hover:bg-white/5 active:bg-white/10 rounded-full text-white/60 touch-manipulation"><Paperclip size={14} className="md:w-4 md:h-4"/></button>
+                    <button className="p-1.5 md:p-1.5 hover:bg-white/5 active:bg-white/10 rounded-full text-white/60 touch-manipulation"><Smile size={14} className="md:w-4 md:h-4"/></button>
                 </div>
-                <button className="p-2 bg-transparent text-white/20 rounded cursor-not-allowed">
-                    <Send size={16} />
+                <button className="p-2 bg-transparent text-white/20 rounded cursor-not-allowed touch-manipulation">
+                    <Send size={14} className="md:w-4 md:h-4" />
                 </button>
             </div>
           </div>
-          <div className="text-center mt-2 text-[10px] text-white/30">
+          <div className="text-center mt-1.5 md:mt-2 text-[9px] md:text-[10px] text-white/30">
              Junior is currently offline. Replies may be delayed.
           </div>
         </div>

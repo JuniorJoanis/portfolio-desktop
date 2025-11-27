@@ -38,6 +38,7 @@ const Window: React.FC<WindowProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const windowRef = useRef<HTMLDivElement>(null);
+  const isMobile = window.innerWidth < 768;
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -49,23 +50,42 @@ const Window: React.FC<WindowProps> = ({
       }
     };
 
+    const handleTouchMove = (e: TouchEvent) => {
+      if (isDragging && !isMaximized && e.touches.length > 0) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        setPosition({
+          x: touch.clientX - dragOffset.x,
+          y: touch.clientY - dragOffset.y,
+        });
+      }
+    };
+
     const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    const handleTouchEnd = () => {
       setIsDragging(false);
     };
 
     if (isDragging) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('touchmove', handleTouchMove, { passive: false });
+      document.addEventListener('touchend', handleTouchEnd);
     }
 
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
     };
   }, [isDragging, dragOffset, isMaximized]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (isMaximized) return;
+    if (isMaximized || isMobile) return; // Disable dragging on mobile
     onFocus();
     setIsDragging(true);
     const rect = windowRef.current?.getBoundingClientRect();
@@ -77,8 +97,23 @@ const Window: React.FC<WindowProps> = ({
     }
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (isMaximized || isMobile) return; // Disable dragging on mobile
+    onFocus();
+    setIsDragging(true);
+    const rect = windowRef.current?.getBoundingClientRect();
+    if (rect && e.touches.length > 0) {
+      const touch = e.touches[0];
+      setDragOffset({
+        x: touch.clientX - rect.left,
+        y: touch.clientY - rect.top,
+      });
+    }
+  };
+
   // Allow content to trigger drag if it has the specific class
   const handleContentMouseDown = (e: React.MouseEvent) => {
+    if (isMobile) return; // Disable dragging on mobile
     const target = e.target as HTMLElement;
     const dragHandle = target.closest('.window-drag-handle');
     // Prevent dragging if clicking interactive elements inside the handle
@@ -86,6 +121,17 @@ const Window: React.FC<WindowProps> = ({
     
     if (dragHandle && !isInteractive) {
       handleMouseDown(e);
+    }
+  };
+
+  const handleContentTouchStart = (e: React.TouchEvent) => {
+    if (isMobile) return; // Disable dragging on mobile
+    const target = e.target as HTMLElement;
+    const dragHandle = target.closest('.window-drag-handle');
+    const isInteractive = target.closest('button, input, a, [role="button"]');
+    
+    if (dragHandle && !isInteractive) {
+      handleTouchStart(e);
     }
   };
 
@@ -98,51 +144,58 @@ const Window: React.FC<WindowProps> = ({
         isMaximized ? 'inset-0 w-full h-[calc(100%-48px)] rounded-none' : ''
       }`}
       style={{
-        transform: isMaximized ? 'none' : `translate(${position.x}px, ${position.y}px)`,
+        transform: isMaximized ? 'none' : isMobile ? `translate(-50%, -50%)` : `translate(${position.x}px, ${position.y}px)`,
         width: isMaximized ? '100%' : `${size.w}px`,
         height: isMaximized ? 'calc(100% - 48px)' : `${size.h}px`,
         zIndex,
-        maxWidth: isMaximized ? '100%' : '90vw',
-        maxHeight: isMaximized ? '100%' : '80vh',
+        maxWidth: isMaximized ? '100%' : isMobile ? '100%' : '90vw',
+        maxHeight: isMaximized ? '100%' : isMobile ? '100%' : '80vh',
+        left: isMaximized ? 0 : isMobile ? '50%' : 'auto',
+        top: isMaximized ? 0 : isMobile ? '50%' : 'auto',
       }}
       onMouseDown={onFocus}
     >
       {/* Title Bar */}
       <div
-        className="flex items-center justify-between px-3 py-2 bg-[#2d2d2d] border-b border-black/20 select-none"
+        className="flex items-center justify-between px-3 py-2 md:py-2 py-3 bg-[#2d2d2d] border-b border-black/20 select-none touch-none"
         onMouseDown={handleMouseDown}
-        onDoubleClick={onMaximize}
+        onTouchStart={handleTouchStart}
+        onDoubleClick={!isMobile ? onMaximize : undefined}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
           {/* Traffic Lights */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0">
             <button 
               onClick={(e) => { e.stopPropagation(); onClose(); }} 
-              className="w-3 h-3 rounded-full bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center group"
+              className="w-3 h-3 md:w-3 md:h-3 rounded-full bg-red-500 hover:bg-red-600 active:bg-red-700 transition-colors flex items-center justify-center group touch-manipulation"
             >
-              <X size={8} className="text-red-900 opacity-0 group-hover:opacity-100" />
+              <X size={8} className="text-red-900 opacity-0 group-hover:opacity-100 md:group-hover:opacity-100 group-active:opacity-100" />
             </button>
-            <button 
-              onClick={(e) => { e.stopPropagation(); onMinimize(); }}
-              className="w-3 h-3 rounded-full bg-yellow-500 hover:bg-yellow-600 transition-colors flex items-center justify-center group"
-            >
-              <Minus size={8} className="text-yellow-900 opacity-0 group-hover:opacity-100" />
-            </button>
-            <button 
-              onClick={(e) => { e.stopPropagation(); onMaximize(); }}
-              className="w-3 h-3 rounded-full bg-green-500 hover:bg-green-600 transition-colors flex items-center justify-center group"
-            >
-               {isMaximized ? 
-                 <Square size={6} className="text-green-900 opacity-0 group-hover:opacity-100 fill-current" /> : 
-                 <Maximize2 size={6} className="text-green-900 opacity-0 group-hover:opacity-100" />
-               }
-            </button>
+            {!isMobile && (
+              <>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); onMinimize(); }}
+                  className="w-3 h-3 rounded-full bg-yellow-500 hover:bg-yellow-600 transition-colors flex items-center justify-center group touch-manipulation"
+                >
+                  <Minus size={8} className="text-yellow-900 opacity-0 group-hover:opacity-100" />
+                </button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); onMaximize(); }}
+                  className="w-3 h-3 rounded-full bg-green-500 hover:bg-green-600 transition-colors flex items-center justify-center group touch-manipulation"
+                >
+                   {isMaximized ? 
+                     <Square size={6} className="text-green-900 opacity-0 group-hover:opacity-100 fill-current" /> : 
+                     <Maximize2 size={6} className="text-green-900 opacity-0 group-hover:opacity-100" />
+                   }
+                </button>
+              </>
+            )}
           </div>
           
           {/* Title */}
-          <div className="flex items-center gap-2 text-xs font-medium text-gray-400">
-             <Icon size={14} />
-             <span>{title}</span>
+          <div className="flex items-center gap-2 text-xs md:text-xs font-medium text-gray-400 min-w-0 flex-1">
+             <Icon size={14} className="flex-shrink-0" />
+             <span className="truncate">{title}</span>
           </div>
         </div>
       </div>
@@ -151,6 +204,7 @@ const Window: React.FC<WindowProps> = ({
       <div 
         className="flex-1 overflow-auto bg-[#1e1e1e] text-gray-200 relative"
         onMouseDown={handleContentMouseDown}
+        onTouchStart={handleContentTouchStart}
       >
         {children}
       </div>

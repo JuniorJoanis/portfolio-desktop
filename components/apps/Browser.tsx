@@ -36,44 +36,44 @@ const Browser: React.FC = () => {
     <div className="flex flex-col h-full bg-[#35363A] text-white overflow-hidden font-sans">
       
       {/* Chrome Toolbar */}
-      <div className="window-drag-handle flex items-center gap-2 p-2 bg-[#202124] border-b border-[#3c4043]">
-        <div className="flex gap-2">
-          <button onClick={handleBack} disabled={historyIndex === 0} className="p-1.5 rounded-full hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent transition-colors">
-            <ArrowLeft size={16} />
+      <div className="window-drag-handle flex items-center gap-1 md:gap-2 p-1.5 md:p-2 bg-[#202124] border-b border-[#3c4043]">
+        <div className="flex gap-1 md:gap-2 flex-shrink-0">
+          <button onClick={handleBack} disabled={historyIndex === 0} className="p-1 md:p-1.5 rounded-full hover:bg-white/10 active:bg-white/20 disabled:opacity-30 disabled:hover:bg-transparent transition-colors touch-manipulation">
+            <ArrowLeft size={14} className="md:w-4 md:h-4" />
           </button>
-          <button onClick={handleForward} disabled={historyIndex === history.length - 1} className="p-1.5 rounded-full hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent transition-colors">
-            <ArrowRight size={16} />
+          <button onClick={handleForward} disabled={historyIndex === history.length - 1} className="p-1 md:p-1.5 rounded-full hover:bg-white/10 active:bg-white/20 disabled:opacity-30 disabled:hover:bg-transparent transition-colors touch-manipulation">
+            <ArrowRight size={14} className="md:w-4 md:h-4" />
           </button>
-          <button onClick={() => setCurrentUrl(currentUrl)} className="p-1.5 rounded-full hover:bg-white/10 transition-colors">
-            <RotateCw size={16} />
+          <button onClick={() => setCurrentUrl(currentUrl)} className="p-1 md:p-1.5 rounded-full hover:bg-white/10 active:bg-white/20 transition-colors touch-manipulation">
+            <RotateCw size={14} className="md:w-4 md:h-4" />
           </button>
         </div>
 
         {/* Address Bar */}
-        <div className="flex-1 bg-[#202124] border border-[#5f6368] rounded-full h-8 flex items-center px-4 gap-2 text-sm relative group focus-within:border-blue-400 focus-within:bg-[#202124]">
-          <Lock size={12} className="text-green-500" />
+        <div className="flex-1 bg-[#202124] border border-[#5f6368] rounded-full h-7 md:h-8 flex items-center px-2 md:px-4 gap-1 md:gap-2 text-xs md:text-sm relative group focus-within:border-blue-400 focus-within:bg-[#202124] min-w-0">
+          <Lock size={10} className="md:w-3 md:h-3 text-green-500 flex-shrink-0" />
           <input 
             type="text" 
             value={currentUrl} 
             onChange={(e) => setCurrentUrl(e.target.value)}
-            className="bg-transparent border-none outline-none w-full text-white/90"
+            className="bg-transparent border-none outline-none w-full text-white/90 min-w-0"
           />
-          <Star size={14} className="text-white/30 hover:text-blue-400 cursor-pointer transition-colors" />
+          <Star size={12} className="md:w-3.5 md:h-3.5 text-white/30 hover:text-blue-400 cursor-pointer transition-colors flex-shrink-0" />
         </div>
 
-        <button onClick={() => navigateTo('https://portfolio.dev/home')} className="p-1.5 rounded-full hover:bg-white/10 transition-colors">
-            <Home size={18} />
+        <button onClick={() => navigateTo('https://portfolio.dev/home')} className="p-1 md:p-1.5 rounded-full hover:bg-white/10 active:bg-white/20 transition-colors touch-manipulation flex-shrink-0">
+            <Home size={16} className="md:w-[18px] md:h-[18px]" />
         </button>
       </div>
 
       {/* Bookmarks Bar */}
-      <div className="flex items-center gap-4 px-3 py-1.5 bg-[#202124] border-b border-[#3c4043] text-xs text-white/80">
-         <button onClick={() => navigateTo('https://portfolio.dev/home')} className="hover:bg-white/10 px-2 py-0.5 rounded flex items-center gap-1">
-            <Home size={12} /> Home
+      <div className="flex items-center gap-2 md:gap-4 px-2 md:px-3 py-1 md:py-1.5 bg-[#202124] border-b border-[#3c4043] text-[10px] md:text-xs text-white/80 overflow-x-auto scrollbar-hide">
+         <button onClick={() => navigateTo('https://portfolio.dev/home')} className="hover:bg-white/10 active:bg-white/20 px-1.5 md:px-2 py-0.5 rounded flex items-center gap-1 flex-shrink-0 touch-manipulation">
+            <Home size={10} className="md:w-3 md:h-3" /> <span className="hidden sm:inline">Home</span>
          </button>
          {PROJECTS.map(p => (
-             <button key={p.id} onClick={() => navigateTo(`https://portfolio.dev/project/${p.id}`)} className="hover:bg-white/10 px-2 py-0.5 rounded flex items-center gap-1 truncate max-w-[100px]">
-                <Globe size={12} /> {p.title}
+             <button key={p.id} onClick={() => navigateTo(`https://portfolio.dev/project/${p.id}`)} className="hover:bg-white/10 active:bg-white/20 px-1.5 md:px-2 py-0.5 rounded flex items-center gap-1 truncate max-w-[80px] md:max-w-[100px] flex-shrink-0 touch-manipulation">
+                <Globe size={10} className="md:w-3 md:h-3 flex-shrink-0" /> <span className="truncate">{p.title}</span>
              </button>
          ))}
       </div>
@@ -101,8 +101,8 @@ const Browser: React.FC = () => {
 
                 {/* Projects Grid - Fits in viewport */}
                 <div className="flex-1 overflow-hidden">
-                    <div className="h-full max-w-7xl mx-auto px-6 py-6">
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 h-full">
+                    <div className="h-full max-w-7xl mx-auto px-3 md:px-6 py-3 md:py-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 h-full">
                             {PROJECTS.map((project, index) => (
                                 <div 
                                     key={project.id} 
@@ -172,27 +172,27 @@ const Browser: React.FC = () => {
         {activeProject && (
             <div className="min-h-full bg-white">
                 {/* Hero */}
-                <div className="bg-slate-900 text-white py-16 px-8 md:px-16 text-center relative overflow-hidden">
+                <div className="bg-slate-900 text-white py-8 md:py-16 px-4 md:px-8 lg:px-16 text-center relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-600/20 to-purple-600/20 z-0"></div>
                     <div className="relative z-10">
-                        <span className="inline-block px-3 py-1 bg-white/10 rounded-full text-xs font-medium mb-4 backdrop-blur-sm border border-white/10">{activeProject.metric}</span>
-                        <h1 className="text-4xl md:text-5xl font-bold mb-4">{activeProject.title}</h1>
-                        <p className="text-lg text-white/70 max-w-2xl mx-auto">{activeProject.description}</p>
+                        <span className="inline-block px-2 md:px-3 py-1 bg-white/10 rounded-full text-[10px] md:text-xs font-medium mb-3 md:mb-4 backdrop-blur-sm border border-white/10">{activeProject.metric}</span>
+                        <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-4 px-2">{activeProject.title}</h1>
+                        <p className="text-sm md:text-lg text-white/70 max-w-2xl mx-auto px-2">{activeProject.description}</p>
                         
                         <a 
                             href={activeProject.link} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 mt-8 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition-colors"
+                            className="inline-flex items-center gap-2 mt-6 md:mt-8 px-4 md:px-6 py-2 md:py-3 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white rounded-lg text-sm md:text-base font-medium transition-colors touch-manipulation"
                         >
-                            Visit Live Site <ExternalLink size={16} />
+                            Visit Live Site <ExternalLink size={14} className="md:w-4 md:h-4" />
                         </a>
                     </div>
                 </div>
 
                 {/* Content */}
-                <div className="max-w-4xl mx-auto py-12 px-6">
-                    <div className="grid md:grid-cols-3 gap-8">
+                <div className="max-w-4xl mx-auto py-6 md:py-12 px-4 md:px-6">
+                    <div className="grid md:grid-cols-3 gap-6 md:gap-8">
                         <div className="col-span-2">
                             <h3 className="text-xl font-bold mb-4 text-slate-900">About the Project</h3>
                             <p className="text-slate-600 leading-relaxed mb-6">
