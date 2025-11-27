@@ -33,13 +33,14 @@ const Resume: React.FC = () => {
               <div className="flex items-center justify-end gap-2">
                 <MapPin size={12} /> Amsterdam / Paris
               </div>
-              <div className="text-blue-600 font-bold mt-2 cursor-pointer hover:underline flex items-center justify-end gap-1">
+              <div className="mt-2 flex items-center justify-end">
                 <a 
                   href="/resume.pdf"
                   download="resume.pdf"
-                  className="hover:underline"
+                  className="flex items-center gap-1.5 text-blue-600 font-bold hover:text-blue-700 transition-colors group"
                 >
-                  <Download size={12} /> Download PDF
+                  <Download size={14} className="group-hover:translate-y-0.5 transition-transform" />
+                  <span className="hover:underline">Download PDF</span>
                 </a>
               </div>
             </div>
