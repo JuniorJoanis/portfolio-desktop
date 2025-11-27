@@ -14,6 +14,7 @@ interface WindowProps {
   onMaximize: () => void;
   onFocus: () => void;
   initialPosition: { x: number; y: number };
+  size?: { w: number; h: number };
   children: React.ReactNode;
 }
 
@@ -30,6 +31,7 @@ const Window: React.FC<WindowProps> = ({
   onMaximize,
   onFocus,
   initialPosition,
+  size = { w: 800, h: 500 },
   children,
 }) => {
   const [position, setPosition] = useState(initialPosition);
@@ -93,10 +95,12 @@ const Window: React.FC<WindowProps> = ({
     <div
       ref={windowRef}
       className={`absolute flex flex-col bg-[#1e1e1e] border border-white/10 rounded-lg overflow-hidden window-shadow transition-all duration-75 ${
-        isMaximized ? 'inset-0 w-full h-[calc(100%-48px)] rounded-none' : 'w-[800px] h-[500px]'
+        isMaximized ? 'inset-0 w-full h-[calc(100%-48px)] rounded-none' : ''
       }`}
       style={{
         transform: isMaximized ? 'none' : `translate(${position.x}px, ${position.y}px)`,
+        width: isMaximized ? '100%' : `${size.w}px`,
+        height: isMaximized ? 'calc(100% - 48px)' : `${size.h}px`,
         zIndex,
         maxWidth: isMaximized ? '100%' : '90vw',
         maxHeight: isMaximized ? '100%' : '80vh',

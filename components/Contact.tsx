@@ -2,8 +2,12 @@ import React from 'react';
 import SectionWrapper from './SectionWrapper';
 import { SOCIALS } from '../constants';
 import { Mail, Github, Linkedin, Twitter, ArrowRight } from 'lucide-react';
+import { getObfuscatedEmail, getEmailMailtoLink } from '../utils/email';
 
 const Contact: React.FC = () => {
+  const email = getObfuscatedEmail();
+  const mailtoLink = getEmailMailtoLink();
+  
   return (
     <div className="bg-background border-t border-white/5">
       <SectionWrapper id="contact" className="py-24">
@@ -17,11 +21,11 @@ const Contact: React.FC = () => {
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mb-20">
                 <a 
-                    href="mailto:junior.joanis@gmail.com" 
+                    href={mailtoLink}
                     className="flex items-center gap-3 px-8 py-4 bg-white text-black font-bold rounded-full hover:bg-accent hover:text-white transition-all shadow-lg shadow-white/10"
                 >
                     <Mail size={20} />
-                    junior.joanis@gmail.com
+                    <span>{email}</span>
                 </a>
                 <a 
                     href="https://www.linkedin.com/in/juniorjoanis/" 

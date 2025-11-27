@@ -10,6 +10,52 @@ import Browser from './components/apps/Browser';
 import { AppId, WindowState } from './types';
 import { TerminalSquare, FileText, Globe, Gamepad2, Hash } from 'lucide-react';
 
+// Helper function to calculate centered position
+const getCenteredPosition = (): { x: number; y: number } => {
+  const windowWidth = 800; // Default window width
+  const windowHeight = 500; // Default window height
+  const taskbarHeight = 48; // Taskbar height
+  
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight - taskbarHeight;
+  
+  return {
+    x: (viewportWidth - windowWidth) / 2,
+    y: (viewportHeight - windowHeight) / 2,
+  };
+};
+
+// Helper function to calculate offset position for cascading windows
+const getOffsetPosition = (index: number, windowWidth: number = 800, windowHeight: number = 500): { x: number; y: number } => {
+  const taskbarHeight = 48;
+  const offsetX = 50; // Horizontal offset between windows
+  const offsetY = 50; // Vertical offset between windows
+  
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight - taskbarHeight;
+  
+  const centeredX = (viewportWidth - windowWidth) / 2;
+  const centeredY = (viewportHeight - windowHeight) / 2;
+  
+  return {
+    x: centeredX + (offsetX * index),
+    y: centeredY + (offsetY * index),
+  };
+};
+
+// Helper function to calculate browser size based on screen dimensions
+const getBrowserSize = (): { w: number; h: number } => {
+  const taskbarHeight = 48;
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight - taskbarHeight;
+  
+  // Use 85% of viewport width and 75% of viewport height, with minimum sizes
+  const width = Math.max(1000, Math.floor(viewportWidth * 0.85));
+  const height = Math.max(600, Math.floor(viewportHeight * 0.75));
+  
+  return { w: width, h: height };
+};
+
 const INITIAL_WINDOWS: WindowState[] = [
   {
     id: 'terminal',
@@ -19,7 +65,7 @@ const INITIAL_WINDOWS: WindowState[] = [
     isMinimized: false,
     isMaximized: false,
     zIndex: 10,
-    position: { x: 50, y: 50 },
+    position: getCenteredPosition(),
   },
   {
     id: 'resume',
@@ -29,7 +75,7 @@ const INITIAL_WINDOWS: WindowState[] = [
     isMinimized: false,
     isMaximized: false,
     zIndex: 9,
-    position: { x: 100, y: 80 },
+    position: getOffsetPosition(1),
   },
   {
     id: 'browser',
@@ -39,7 +85,11 @@ const INITIAL_WINDOWS: WindowState[] = [
     isMinimized: false,
     isMaximized: false,
     zIndex: 8,
-    position: { x: 150, y: 110 },
+    position: (() => {
+      const browserSize = getBrowserSize();
+      return getOffsetPosition(2, browserSize.w, browserSize.h);
+    })(),
+    size: getBrowserSize(),
   },
   {
     id: 'game',
@@ -49,7 +99,7 @@ const INITIAL_WINDOWS: WindowState[] = [
     isMinimized: false,
     isMaximized: false,
     zIndex: 7,
-    position: { x: 200, y: 140 },
+    position: getOffsetPosition(3),
   },
   {
     id: 'slack',
@@ -59,7 +109,8 @@ const INITIAL_WINDOWS: WindowState[] = [
     isMinimized: false,
     isMaximized: false,
     zIndex: 6,
-    position: { x: 250, y: 170 },
+    position: getOffsetPosition(4, 800, 700),
+    size: { w: 800, h: 700 },
   }
 ];
 
@@ -153,6 +204,7 @@ function App() {
                onMaximize={() => updateWindowState(win.id, { isMaximized: !win.isMaximized })}
                onFocus={() => focusWindow(win.id)}
                initialPosition={win.position}
+               size={win.size}
              >
                 {win.id === 'terminal' && <Terminal />}
                 {win.id === 'resume' && <Resume />}

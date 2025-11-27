@@ -1,4 +1,5 @@
 import { ExperienceItem, ProjectItem, SkillCategory, SocialLink } from './types';
+import { getEmailMailtoLink } from './utils/email';
 
 export const BIO = {
   name: "Junior Joanis",
@@ -88,7 +89,15 @@ export const PROJECTS: ProjectItem[] = [
     description: "AI-driven Accounts Receivable automation platform. Built with Payment Orchestration and Reconciliation algorithms to help finance teams automate cash collection.",
     tags: ["Fintech", "AI Agent", "Rails", "React", "GCP"],
     link: "https://delfyn.co",
-    metric: "AR Automation"
+    metric: "AR Automation",
+    about: "This project represents a key milestone in my career, leveraging advanced technologies to solve complex problems in the Fintech space. It involved not only the development of the product, but also founding the company and talking to customers and partners to understand their needs and how to best serve them.",
+    features: [
+      "AI Copilots for accounts receivable specialists.",
+      "Seamless Integration with third-party APIs, ERPs, PSPs, BNPLs, Open Banking APIs, etc.",
+      "Advanced Analytics and Reporting Dashboards.",
+      "Payment Orchestration and Reconciliation algorithms."
+    ],
+    role: "Co-Founder & CTO"
   },
   {
     id: 2,
@@ -96,7 +105,15 @@ export const PROJECTS: ProjectItem[] = [
     description: "Employee Wellbeing SaaS platform scaling to 100k+ users. Features include advanced HR analytics, data lakes, and multi-cloud infrastructure.",
     tags: ["HealthTech", "SaaS", "Big Data", "AWS", "Kubernetes"],
     link: "https://www.moodwork.com",
-    metric: "100k+ Users"
+    metric: "100k+ Users",
+    about: "Led the technical vision and execution of a comprehensive employee wellbeing platform serving major enterprises. This project involved scaling infrastructure to handle 100k+ active users, building complex data analytics pipelines, and ensuring GDPR compliance as Data Protection Officer.",
+    features: [
+      "Scalable multi-cloud infrastructure (AWS, OVH, Scaleway) with 99.9% SLA.",
+      "Data lake & analytics pipelines for HR/wellbeing insights.",
+      "GDPR-compliant data processing and privacy controls.",
+      "Advanced HR analytics dashboards for enterprise clients."
+    ],
+    role: "CTO"
   },
   {
     id: 3,
@@ -104,7 +121,15 @@ export const PROJECTS: ProjectItem[] = [
     description: "Augmented Reality SaaS for retail. Developed high-availability infrastructure serving millions of requests for clients like Yihaodian.",
     tags: ["AR/VR", "High Availability", "Infrastructure", "Ruby"],
     link: "http://www.trylive.com",
-    metric: "Scale Strategy"
+    metric: "Scale Strategy",
+    about: "Built a SaaS product for augmented reality media used in retail and e-commerce. This project involved developing high-availability infrastructure strategies and deploying infrastructure across multiple regions, including a significant deployment in China.",
+    features: [
+      "High-availability infrastructure serving millions of requests.",
+      "Multi-region deployment including 30 servers in China.",
+      "Developer API documentation and SDK.",
+      "Scaling strategy with AWS (ELB, Auto Scaling, CloudFront)."
+    ],
+    role: "Software Engineer"
   },
    {
     id: 4,
@@ -112,7 +137,15 @@ export const PROJECTS: ProjectItem[] = [
     description: "Leading AR platform for e-commerce. Optimized background job processing improving throughput by 30% for 3D model rendering pipelines.",
     tags: ["E-commerce", "Performance", "AWS EC2", "Sidekiq"],
     link: "https://www.augment.com",
-    metric: "+30% Performance"
+    metric: "+30% Performance",
+    about: "Developed new features and APIs for an augmented reality platform used in e-commerce and retail. Focused on performance optimization, particularly improving background job processing throughput for 3D model rendering pipelines.",
+    features: [
+      "Optimized background job processing (Sidekiq, AWS EC2) improving throughput by 30%.",
+      "New features and APIs for AR platform in e-commerce.",
+      "3D model rendering pipeline optimization.",
+      "Performance improvements for high-volume processing."
+    ],
+    role: "Fullstack Developer"
   }
 ];
 
@@ -120,7 +153,7 @@ export const SOCIALS: SocialLink[] = [
   { platform: "GitHub", url: "https://github.com/JuniorJoanis", icon: "github" },
   { platform: "LinkedIn", url: "https://www.linkedin.com/in/juniorjoanis/", icon: "linkedin" },
   { platform: "Twitter/X", url: "https://x.com/juniorjoanis", icon: "twitter" },
-  { platform: "Email", url: "mailto:junior.joanis@gmail.com", icon: "mail" }
+  { platform: "Email", url: getEmailMailtoLink(), icon: "mail" }
 ];
 
 export const CHART_DATA = [

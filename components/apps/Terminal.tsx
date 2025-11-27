@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { BIO, EXPERIENCE, PROJECTS, SKILLS } from '../../constants';
+import { getObfuscatedEmail, getEmailMailtoLink } from '../../utils/email';
 
 const Terminal: React.FC = () => {
   const [history, setHistory] = useState<Array<{ type: 'input' | 'output'; content: React.ReactNode }>>([
@@ -87,7 +88,7 @@ const Terminal: React.FC = () => {
       case 'contact':
         output = (
             <div>
-                <div>Email: <a href="mailto:junior.joanis@gmail.com" className="text-blue-400 underline">junior.joanis@gmail.com</a></div>
+                <div>Email: <a href={getEmailMailtoLink()} className="text-blue-400 underline">{getObfuscatedEmail()}</a></div>
                 <div>GitHub: <a href="https://github.com/JuniorJoanis" className="text-blue-400 underline">github.com/JuniorJoanis</a></div>
                 <div>Twitter: <a href="https://x.com/juniorjoanis" className="text-blue-400 underline">@juniorjoanis</a></div>
             </div>

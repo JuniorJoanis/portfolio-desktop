@@ -63,7 +63,7 @@ const Taskbar: React.FC<TaskbarProps> = ({ windows, activeWindowId, onToggleWind
             <Wifi size={14} />
             <Battery size={14} />
         </div>
-        <div className="flex flex-col items-end leading-none">
+        <div className="flex flex-col items-end leading-none gap-1.5">
             <span>{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
             <span className="text-[10px] text-slate-500">{time.toLocaleDateString()}</span>
         </div>

@@ -83,28 +83,87 @@ const Browser: React.FC = () => {
         
         {/* HOMEPAGE VIEW */}
         {isHome && (
-            <div className="min-h-full flex flex-col items-center pt-[10%] bg-[#F8F9FA]">
-                <div className="mb-8 flex flex-col items-center gap-4 animate-fade-in">
-                    <div className="w-20 h-20 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg">
-                        <Globe size={48} />
+            <div className="h-full bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20 flex flex-col">
+                {/* Compact Header */}
+                <div className="flex-shrink-0 px-8 py-6 border-b border-slate-200/50 bg-white/50 backdrop-blur-sm">
+                    <div className="max-w-7xl mx-auto flex items-center gap-4">
+                        <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                            <Globe size={24} className="text-white" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-900 via-blue-800 to-purple-800 bg-clip-text text-transparent">
+                                My Work
+                            </h1>
+                            <p className="text-xs text-slate-600">Exploring innovative solutions across Fintech, HealthTech, and AR/VR</p>
+                        </div>
                     </div>
-                    <h1 className="text-3xl font-bold text-gray-700">My Work</h1>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl w-full px-4">
-                    {PROJECTS.map((project) => (
-                        <div 
-                            key={project.id} 
-                            onClick={() => navigateTo(`https://portfolio.dev/project/${project.id}`)}
-                            className="group relative aspect-square bg-white rounded-lg shadow-sm hover:shadow-md border border-gray-200 cursor-pointer transition-all hover:-translate-y-1 flex flex-col items-center justify-center p-4 text-center overflow-hidden"
-                        >
-                            <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                                <Globe size={24} />
-                            </div>
-                            <h3 className="font-medium text-gray-800 text-sm">{project.title}</h3>
-                            <p className="text-xs text-gray-400 mt-1 line-clamp-2">{project.description}</p>
+                {/* Projects Grid - Fits in viewport */}
+                <div className="flex-1 overflow-hidden">
+                    <div className="h-full max-w-7xl mx-auto px-6 py-6">
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 h-full">
+                            {PROJECTS.map((project, index) => (
+                                <div 
+                                    key={project.id} 
+                                    onClick={() => navigateTo(`https://portfolio.dev/project/${project.id}`)}
+                                    className="group relative bg-white/90 backdrop-blur-sm rounded-xl shadow-md hover:shadow-xl border border-slate-200/50 cursor-pointer transition-all duration-300 hover:-translate-y-1 overflow-hidden flex flex-col"
+                                >
+                                    {/* Gradient Overlay */}
+                                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/0 via-purple-500/0 to-pink-500/0 group-hover:from-blue-500/5 group-hover:via-purple-500/5 group-hover:to-pink-500/5 transition-all duration-300"></div>
+                                    
+                                    {/* Content */}
+                                    <div className="relative p-4 flex flex-col h-full">
+                                        {/* Icon & Title Row */}
+                                        <div className="flex items-start gap-3 mb-3">
+                                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-md group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 flex-shrink-0">
+                                                <Globe size={20} className="text-white" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h3 className="text-base font-bold text-slate-900 mb-1 group-hover:text-blue-600 transition-colors line-clamp-1">
+                                                    {project.title}
+                                                </h3>
+                                                {project.metric && (
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700 border border-blue-200/50">
+                                                        {project.metric}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Description */}
+                                        <p className="text-xs text-slate-600 leading-relaxed mb-3 flex-grow line-clamp-3">
+                                            {project.description}
+                                        </p>
+                                        
+                                        {/* Tags */}
+                                        <div className="flex flex-wrap gap-1.5 mt-auto">
+                                            {project.tags.slice(0, 2).map(tag => (
+                                                <span key={tag} className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                                    {tag}
+                                                </span>
+                                            ))}
+                                            {project.tags.length > 2 && (
+                                                <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                                    +{project.tags.length - 2}
+                                                </span>
+                                            )}
+                                        </div>
+                                        
+                                        {/* Hover Arrow */}
+                                        <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0 transition-all duration-300">
+                                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-md">
+                                                <ExternalLink size={12} className="text-white" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Shine Effect */}
+                                    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                                </div>
+                            ))}
                         </div>
-                    ))}
+                    </div>
                 </div>
             </div>
         )}
@@ -137,25 +196,22 @@ const Browser: React.FC = () => {
                         <div className="col-span-2">
                             <h3 className="text-xl font-bold mb-4 text-slate-900">About the Project</h3>
                             <p className="text-slate-600 leading-relaxed mb-6">
-                                This project represents a key milestone in my career, leveraging advanced technologies to solve complex problems in the {activeProject.tags[0]} space.
-                                It involved orchestrating high-performance infrastructure and delivering a seamless user experience.
+                                {activeProject.about || `This project represents a key milestone in my career, leveraging advanced technologies to solve complex problems in the ${activeProject.tags[0]} space.`}
                             </p>
                             
-                            <h3 className="text-xl font-bold mb-4 text-slate-900">Key Features</h3>
-                            <ul className="space-y-3">
-                                <li className="flex items-start gap-3">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-2.5"></div>
-                                    <p className="text-slate-600">Scalable Architecture handling high throughput.</p>
-                                </li>
-                                <li className="flex items-start gap-3">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-2.5"></div>
-                                    <p className="text-slate-600">Seamless Integration with third-party APIs.</p>
-                                </li>
-                                <li className="flex items-start gap-3">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-2.5"></div>
-                                    <p className="text-slate-600">Advanced Analytics and Reporting Dashboards.</p>
-                                </li>
-                            </ul>
+                            {activeProject.features && activeProject.features.length > 0 && (
+                                <>
+                                    <h3 className="text-xl font-bold mb-4 text-slate-900">Key Features</h3>
+                                    <ul className="space-y-3">
+                                        {activeProject.features.map((feature, index) => (
+                                            <li key={index} className="flex items-start gap-3">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-2.5"></div>
+                                                <p className="text-slate-600">{feature}</p>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </>
+                            )}
                         </div>
 
                         <div className="bg-slate-50 rounded-xl p-6 h-fit border border-slate-200">
@@ -168,10 +224,12 @@ const Browser: React.FC = () => {
                                 ))}
                             </div>
 
-                            <div className="mt-8 pt-6 border-t border-slate-200">
-                                <h4 className="font-bold text-slate-900 mb-2">Role</h4>
-                                <p className="text-sm text-slate-600">CTO & Lead Engineer</p>
-                            </div>
+                            {activeProject.role && (
+                                <div className="mt-8 pt-6 border-t border-slate-200">
+                                    <h4 className="font-bold text-slate-900 mb-2">Role</h4>
+                                    <p className="text-sm text-slate-600">{activeProject.role}</p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

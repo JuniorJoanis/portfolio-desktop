@@ -16,6 +16,9 @@ export interface ProjectItem {
   tags: string[];
   link?: string;
   metric?: string;
+  about?: string;
+  features?: string[];
+  role?: string;
 }
 
 export interface SocialLink {
