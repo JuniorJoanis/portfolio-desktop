@@ -29,6 +29,10 @@ const USERS: Record<string, User> = {
   'me': { id: 'me', name: 'Junior Joanis', avatar: 'JJ', status: 'online' },
   'alex': { id: 'alex', name: 'Alex (Lead Dev)', avatar: 'AL', status: 'busy' },
   'sarah': { id: 'sarah', name: 'Sarah (Product)', avatar: 'SA', status: 'online' },
+  'david': { id: 'david', name: 'David (DevOps)', avatar: 'DV', status: 'online' },
+  'pm': { id: 'pm', name: 'PM (Product Manager)', avatar: 'PM', status: 'online' },
+  'ceo': { id: 'ceo', name: 'CEO', avatar: 'CE', status: 'online' },
+  'dev': { id: 'dev', name: 'Developer', avatar: 'DE', status: 'online' },
 };
 
 // Direct Message Conversations
@@ -146,6 +150,187 @@ const DIRECT_MESSAGES: Record<string, Message[]> = {
       timestamp: '2:32 PM',
       content: "Perfect. And let's make sure the demo uses realistic but synthetic data. No real customer data in demos — ever.",
       reactions: [{ emoji: '✅', count: 1 }, { emoji: '🔒', count: 1 }]
+      },
+    ],
+  'david': [
+    {
+      id: 1,
+      userId: 'david',
+      timestamp: '11:20 AM',
+      content: "Junior, I've been monitoring our infrastructure costs. The LLM API calls are getting expensive — we're spending $8k/month on Vertex AI alone.",
+    },
+    {
+      id: 2,
+      userId: 'me',
+      timestamp: '11:23 AM',
+      content: "That's significant. What's the breakdown? Are we hitting rate limits or just high volume?",
+      reactions: [{ emoji: '📊', count: 1 }]
+    },
+    {
+      id: 3,
+      userId: 'david',
+      timestamp: '11:25 AM',
+      content: "High volume mostly. We're processing every invoice through the LLM, even duplicates. Also, we're not caching embeddings — same invoice format gets re-processed multiple times.",
+    },
+    {
+      id: 4,
+      userId: 'me',
+      timestamp: '11:28 AM',
+      content: "We need to implement embedding caching immediately. Use a hash of the invoice layout fingerprint as the cache key. And add a feature flag to skip LLM processing for invoices we've seen before.",
+      reactions: [{ emoji: '💡', count: 2 }, { emoji: '💰', count: 1 }]
+    },
+    {
+      id: 5,
+      userId: 'david',
+      timestamp: '11:30 AM',
+      content: "Good plan. Should I also set up cost alerts? We can get notified if daily spend exceeds a threshold.",
+    },
+    {
+      id: 6,
+      userId: 'me',
+      timestamp: '11:32 AM',
+      content: "Yes, set alerts at $300/day. And let's add per-customer cost tracking in the dashboard. Finance needs visibility into which clients are driving costs.",
+      reactions: [{ emoji: '✅', count: 1 }, { emoji: '📈', count: 1 }]
+    },
+    {
+      id: 7,
+      userId: 'david',
+      timestamp: '11:35 AM',
+      content: "Will do. I'll also benchmark smaller models — we might be able to use cheaper options for simple extraction tasks.",
+      reactions: [{ emoji: '👍', count: 1 }]
+    },
+  ],
+  'pm': [
+    {
+      id: 1,
+      userId: 'pm',
+      timestamp: '3:10 PM',
+      content: "Junior, the customer success team is asking for better error messages. Users are confused when invoice parsing fails — they don't know what to do next.",
+    },
+    {
+      id: 2,
+      userId: 'me',
+      timestamp: '3:13 PM',
+      content: "Good feedback. We should show actionable errors: 'PDF is password-protected' → 'Remove password and re-upload', not just 'Processing failed'.",
+      reactions: [{ emoji: '💡', count: 1 }]
+    },
+    {
+      id: 3,
+      userId: 'pm',
+      timestamp: '3:15 PM',
+      content: "Exactly. Can we also add a retry mechanism? Some failures are transient — network issues, API timeouts.",
+    },
+    {
+      id: 4,
+      userId: 'me',
+      timestamp: '3:18 PM',
+      content: "Yes. Implement exponential backoff for retries — 3 attempts max. And add a 'Retry' button in the UI for manual retries. I'll prioritize this in the next sprint.",
+      reactions: [{ emoji: '✅', count: 2 }, { emoji: '🔄', count: 1 }]
+    },
+    {
+      id: 5,
+      userId: 'pm',
+      timestamp: '3:20 PM',
+      content: "Perfect. One more thing — can we add progress indicators? Users want to see 'Extracting data...' → 'Validating...' → 'Complete'.",
+      reactions: [{ emoji: '👀', count: 1 }]
+    },
+    {
+      id: 6,
+      userId: 'me',
+      timestamp: '3:22 PM',
+      content: "Good UX. I'll add WebSocket updates for real-time progress. Much better than polling.",
+      reactions: [{ emoji: '🚀', count: 1 }]
+    },
+  ],
+  'ceo': [
+    {
+      id: 1,
+      userId: 'ceo',
+      timestamp: '9:45 AM',
+      content: "Junior, we have a board meeting next week. They want to understand our technical moat — what makes Delfyn defensible from a tech perspective?",
+    },
+    {
+      id: 2,
+      userId: 'me',
+      timestamp: '9:48 AM',
+      content: "Three key moats: 1) Our reconciliation algorithms handle edge cases competitors miss — multi-channel payments, partial settlements, currency conversions. 2) The AI copilot learns from each customer's data patterns. 3) Deep ERP integrations — we're not just API connectors, we understand finance workflows.",
+      reactions: [{ emoji: '🛡️', count: 2 }, { emoji: '💡', count: 1 }]
+    },
+    {
+      id: 3,
+      userId: 'ceo',
+      timestamp: '9:50 AM',
+      content: "That's strong. Can you quantify the technical advantage? Like, how much faster are we at reconciliation vs manual processes?",
+    },
+    {
+      id: 4,
+      userId: 'me',
+      timestamp: '9:53 AM',
+      content: "We reduce reconciliation time from 4 hours/week to 15 minutes/week per finance team. That's a 16x improvement. And our accuracy is 98.5% vs 85% manual average.",
+      reactions: [{ emoji: '📊', count: 2 }, { emoji: '⚡', count: 1 }]
+    },
+    {
+      id: 5,
+      userId: 'ceo',
+      timestamp: '9:55 AM',
+      content: "Perfect. Can you prepare a 2-slide technical overview? Focus on the algorithms and AI capabilities.",
+      reactions: [{ emoji: '👍', count: 1 }]
+    },
+    {
+      id: 6,
+      userId: 'me',
+      timestamp: '9:57 AM',
+      content: "Absolutely. I'll include architecture diagrams and customer metrics. Should have it ready by Friday.",
+      reactions: [{ emoji: '✅', count: 1 }]
+    },
+  ],
+  'dev': [
+    {
+      id: 1,
+      userId: 'dev',
+      timestamp: '1:30 PM',
+      content: "Hey Junior, I'm working on the invoice validation module. Should I validate data as it comes in, or batch validate at the end?",
+    },
+    {
+      id: 2,
+      userId: 'me',
+      timestamp: '1:33 PM',
+      content: "Validate as you go. Fail fast — if the invoice number is missing, don't wait until the end to tell the user. Better UX and easier debugging.",
+      reactions: [{ emoji: '💡', count: 2 }]
+    },
+    {
+      id: 3,
+      userId: 'dev',
+      timestamp: '1:35 PM',
+      content: "Makes sense. Should I use Rails validations or a separate service object?",
+      reactions: [{ emoji: '🤔', count: 1 }]
+    },
+    {
+      id: 4,
+      userId: 'me',
+      timestamp: '1:38 PM',
+      content: "Use a service object. Rails validations are for models, but invoice validation has business logic — currency checks, date ranges, amount calculations. Keep it testable and reusable.",
+      reactions: [{ emoji: '✅', count: 2 }, { emoji: '🎯', count: 1 }]
+    },
+    {
+      id: 5,
+      userId: 'dev',
+      timestamp: '1:40 PM',
+      content: "Got it. One more question — should validation errors block the import, or just flag them?",
+    },
+    {
+      id: 6,
+      userId: 'me',
+      timestamp: '1:43 PM',
+      content: "Flag them, but allow import. Some errors are warnings (missing PO number), some are critical (invalid amount). Let users decide what to do. We'll show a summary at the end.",
+      reactions: [{ emoji: '💡', count: 1 }, { emoji: '📋', count: 1 }]
+    },
+    {
+      id: 7,
+      userId: 'dev',
+      timestamp: '1:45 PM',
+      content: "Perfect. That gives users flexibility. Thanks for the guidance!",
+      reactions: [{ emoji: '👍', count: 1 }]
     },
   ],
 };
