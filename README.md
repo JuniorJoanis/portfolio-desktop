@@ -1,7 +1,3 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
-
 # Portfolio Desktop
 
 An interactive portfolio website that mimics a desktop operating system interface. Built with React, TypeScript, and Vite, this project presents professional information through a familiar desktop environment with draggable windows, a taskbar, and multiple applications.
