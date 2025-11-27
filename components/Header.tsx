@@ -35,8 +35,23 @@ const Header: React.FC = () => {
           `}>
             
             {/* Logo */}
-            <a href="#" className="font-display font-bold text-xl tracking-tight text-white hover:text-accent transition-colors">
-              Junior Joanis<span className="text-accent">.</span>
+            <a 
+              href="#" 
+              className="group relative flex items-center gap-2 font-display font-bold text-xl tracking-tight transition-all duration-300 hover:scale-105"
+            >
+              <div className="relative">
+                {/* Gradient text effect */}
+                <span className="relative z-10 bg-gradient-to-r from-white via-white to-accent bg-clip-text text-transparent group-hover:from-accent group-hover:via-white group-hover:to-accent transition-all duration-500">
+                  Junior Joanis
+                </span>
+                {/* Glow effect on hover */}
+                <span className="absolute inset-0 bg-gradient-to-r from-accent/20 via-white/10 to-accent/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></span>
+              </div>
+              {/* Animated dot */}
+              <span className="relative inline-block w-2 h-2">
+                <span className="absolute inset-0 bg-gradient-to-br from-accent to-accent/60 rounded-full animate-pulse"></span>
+                <span className="absolute inset-0 bg-accent rounded-full blur-sm opacity-50 animate-ping"></span>
+              </span>
             </a>
 
             {/* Desktop Nav */}
