@@ -3,6 +3,10 @@ import { BIO, EXPERIENCE, SKILLS } from '../../constants';
 import { Download, Mail, MapPin } from 'lucide-react';
 
 const Resume: React.FC = () => {
+  // Obfuscate email to prevent bot scraping
+  const emailParts = ['junior', '.', 'joanis', '@', 'gmail', '.', 'com'];
+  const email = emailParts.join('');
+
   return (
     <div className="h-full bg-[#525659] overflow-y-auto w-full">
       <div className="min-h-full flex justify-center p-4 md:p-8">
@@ -16,14 +20,31 @@ const Resume: React.FC = () => {
               </div>
               <div className="text-right text-xs space-y-1">
                   <div className="flex items-center justify-end gap-2">
-                      <Mail size={12} /> junior.joanis@gmail.com
+                      <Mail size={12} /> 
+                      <a 
+                        href={`mailto:${email}`}
+                        className="hover:underline"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          window.location.href = `mailto:${email}`;
+                        }}
+                      >
+                        {email}
+                      </a>
                   </div>
                   <div className="flex items-center justify-end gap-2">
                       <MapPin size={12} /> Amsterdam / Paris
                   </div>
                   <div className="text-blue-600 font-bold mt-2 cursor-pointer hover:underline flex items-center justify-end gap-1">
-                      <Download size={12} /> Download PDF
+                      <a 
+                        href="/resume.pdf"
+                        download="resume.pdf"
+                        className="hover:underline"
+                      >
+                        <Download size={12} /> Download PDF
+                      </a>
                   </div>
+                </div>
               </div>
           </div>
 
