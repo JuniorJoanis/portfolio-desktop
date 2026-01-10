@@ -1,7 +1,15 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Rss, Github, Linkedin, Twitter } from 'lucide-react';
+import { ArrowLeft, Github, Linkedin, Twitter, Mail } from 'lucide-react';
 import { getEmailMailtoLink } from '../../utils/email';
+import { SOCIALS, BIO } from '../../constants';
+
+const iconMap: Record<string, React.ReactNode> = {
+  github: <Github size={18} />,
+  linkedin: <Linkedin size={18} />,
+  twitter: <Twitter size={18} />,
+  mail: <Mail size={18} />,
+};
 
 interface BlogLayoutProps {
   children: React.ReactNode;
@@ -10,75 +18,53 @@ interface BlogLayoutProps {
 
 const BlogLayout: React.FC<BlogLayoutProps> = ({ children, showBackToHome = true }) => {
   return (
-    <div className="min-h-screen bg-[#0a0a0b] text-[#e4e4e7] selection:bg-amber-500/30">
-      {/* Geometric background pattern */}
-      <div className="fixed inset-0 z-0 opacity-[0.03]">
-        <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
-              <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#fff" strokeWidth="0.5"/>
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#grid)" />
-        </svg>
-      </div>
+    <div className="min-h-screen bg-[#0a0f1a] text-slate-300 selection:bg-teal-500/30" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      {/* Subtle noise texture overlay */}
+      <div className="fixed inset-0 z-0 opacity-[0.015] pointer-events-none" style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+      }} />
       
-      {/* Gradient orbs */}
-      <div className="fixed top-0 right-0 w-[800px] h-[800px] bg-amber-500/5 rounded-full blur-[120px] pointer-events-none" />
-      <div className="fixed bottom-0 left-0 w-[600px] h-[600px] bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none" />
+      {/* Gradient atmosphere */}
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[600px] bg-gradient-to-b from-teal-500/[0.07] via-cyan-500/[0.03] to-transparent rounded-full blur-[100px] pointer-events-none z-0" />
+      <div className="fixed bottom-0 right-0 w-[500px] h-[500px] bg-slate-500/[0.03] rounded-full blur-[80px] pointer-events-none z-0" />
       
       {/* Header */}
-      <header className="relative z-10 border-b border-white/5 bg-[#0a0a0b]/80 backdrop-blur-xl sticky top-0">
-        <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+      <header className="sticky top-0 z-50 border-b border-slate-800/50 bg-[#0a0f1a]/80 backdrop-blur-xl">
+        <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
             {showBackToHome && (
               <Link 
                 to="/" 
-                className="flex items-center gap-2 text-sm text-zinc-500 hover:text-amber-400 transition-colors group"
+                className="flex items-center gap-2 text-sm text-slate-500 hover:text-teal-400 transition-colors group"
               >
                 <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-                <span className="font-mono">~/home</span>
+                <span>Portfolio</span>
               </Link>
             )}
             <Link to="/blog" className="flex items-center gap-3 group">
-              <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center font-mono font-bold text-black text-sm">
-                JJ
-              </div>
-              <span className="font-mono text-lg font-medium text-zinc-100 group-hover:text-amber-400 transition-colors">
-                /blog
+              <img 
+                src={BIO.avatarUrl} 
+                alt={BIO.name}
+                className="w-8 h-8 rounded-lg object-cover"
+              />
+              <span className="text-lg font-medium text-slate-100 group-hover:text-teal-400 transition-colors" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                Blog
               </span>
             </Link>
           </div>
           
-          <nav className="flex items-center gap-4">
-            <a 
-              href="https://github.com/JuniorJoanis" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="p-2 text-zinc-500 hover:text-zinc-100 transition-colors"
-            >
-              <Github size={18} />
-            </a>
-            <a 
-              href="https://linkedin.com/in/juniorjoanis" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="p-2 text-zinc-500 hover:text-zinc-100 transition-colors"
-            >
-              <Linkedin size={18} />
-            </a>
-            <a 
-              href="https://x.com/juniorjoanis" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="p-2 text-zinc-500 hover:text-zinc-100 transition-colors"
-            >
-              <Twitter size={18} />
-            </a>
-            <div className="w-px h-4 bg-zinc-700 mx-2" />
-            <button className="p-2 text-zinc-500 hover:text-amber-400 transition-colors">
-              <Rss size={18} />
-            </button>
+          <nav className="flex items-center gap-1">
+            {SOCIALS.filter(s => s.icon !== 'mail').map(social => (
+              <a
+                key={social.platform}
+                href={social.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2.5 text-slate-500 hover:text-slate-200 hover:bg-slate-800/50 rounded-lg transition-all"
+              >
+                {iconMap[social.icon]}
+              </a>
+            ))}
           </nav>
         </div>
       </header>
@@ -89,21 +75,24 @@ const BlogLayout: React.FC<BlogLayoutProps> = ({ children, showBackToHome = true
       </main>
       
       {/* Footer */}
-      <footer className="relative z-10 border-t border-white/5 mt-24">
-        <div className="max-w-5xl mx-auto px-6 py-12">
+      <footer className="relative z-10 border-t border-slate-800/50 mt-24">
+        <div className="max-w-4xl mx-auto px-6 py-12">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
-              <div className="w-6 h-6 bg-gradient-to-br from-amber-400 to-orange-500 rounded flex items-center justify-center font-mono font-bold text-black text-xs">
-                JJ
-              </div>
-              <span className="text-sm text-zinc-500">
-                © 2026 Junior Joanis. Engineering thoughts & technical deep-dives.
+              <img 
+                src={BIO.avatarUrl} 
+                alt={BIO.name}
+                className="w-6 h-6 rounded object-cover"
+              />
+              <span className="text-sm text-slate-500">
+                © 2026 Junior Joanis
               </span>
             </div>
-            <div className="flex items-center gap-6 text-sm text-zinc-600">
-              <Link to="/" className="hover:text-amber-400 transition-colors">Portfolio</Link>
-              <Link to="/blog" className="hover:text-amber-400 transition-colors">Blog</Link>
-              <a href={getEmailMailtoLink()} className="hover:text-amber-400 transition-colors">Contact</a>
+            <div className="flex items-center gap-8 text-sm text-slate-500">
+              <Link to="/" className="hover:text-teal-400 transition-colors">Portfolio</Link>
+              <Link to="/blog" className="hover:text-teal-400 transition-colors">Blog</Link>
+              <a href="/rss.xml" className="hover:text-teal-400 transition-colors" title="RSS Feed">RSS</a>
+              <a href={getEmailMailtoLink()} className="hover:text-teal-400 transition-colors">Contact</a>
             </div>
           </div>
         </div>
@@ -113,4 +102,3 @@ const BlogLayout: React.FC<BlogLayoutProps> = ({ children, showBackToHome = true
 };
 
 export default BlogLayout;
-

@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Taskbar from './components/os/Taskbar';
 import Window from './components/os/Window';
 import Terminal from './components/apps/Terminal';
@@ -8,7 +9,7 @@ import Game from './components/apps/Game';
 import Slack from './components/apps/Slack';
 import Browser from './components/apps/Browser';
 import { AppId, WindowState } from './types';
-import { TerminalSquare, FileText, Globe, Gamepad2, Hash } from 'lucide-react';
+import { TerminalSquare, FileText, Globe, Gamepad2, Hash, BookOpen } from 'lucide-react';
 
 // Helper function to detect mobile devices
 const isMobile = (): boolean => {
@@ -155,6 +156,7 @@ const getInitialWindows = (): WindowState[] => {
 const INITIAL_WINDOWS: WindowState[] = getInitialWindows();
 
 function App() {
+  const navigate = useNavigate();
   const [windows, setWindows] = useState<WindowState[]>(INITIAL_WINDOWS);
   const [activeWindowId, setActiveWindowId] = useState<AppId | null>('terminal');
   const [highestZ, setHighestZ] = useState(10);
@@ -268,6 +270,11 @@ function App() {
           icon={Hash} 
           label="TeamChat" 
           onClick={() => toggleWindow('slack')} 
+        />
+        <DesktopIcon 
+          icon={BookOpen} 
+          label="Blog" 
+          onClick={() => navigate('/blog')} 
         />
       </div>
 

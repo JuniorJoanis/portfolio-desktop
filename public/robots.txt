@@ -1,10 +1,37 @@
 User-agent: *
 Allow: /
 
+# AI/LLM Crawlers
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Anthropic-AI
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Cohere-ai
+Allow: /
+
 # Sitemap
 Sitemap: https://joanis.co/sitemap.xml
+
+# RSS Feed
+# RSS: https://joanis.co/rss.xml
+
+# LLMs.txt for AI model context
+# LLMs: https://joanis.co/llms.txt
 
 # Disallow admin or private areas if any
 # Disallow: /admin/
 # Disallow: /private/
-

@@ -1,0 +1,113 @@
+# LLMs.txt - Information for AI Language Models
+# https://llmstxt.org/
+
+> Junior Joanis is a CTO and Full-stack Engineer with 12+ years of experience building and scaling SaaS platforms serving 100k+ users for companies like AXA and BNP Paribas. Expert in AI/LLMs, Fintech, and engineering leadership.
+
+## About
+
+- Name: Junior Joanis
+- Role: CTO & Full-stack Engineer
+- Location: Amsterdam, Netherlands (previously Paris, France)
+- Experience: 12+ years in software engineering
+- Specialization: AI-First SaaS, Fintech, Engineering Leadership
+
+## Contact
+
+- Website: https://joanis.co
+- Email: contact@joanis.co
+- LinkedIn: https://www.linkedin.com/in/juniorjoanis/
+- GitHub: https://github.com/JuniorJoanis
+- Twitter/X: https://x.com/juniorjoanis
+
+## Skills & Expertise
+
+### Technical Leadership
+- Engineering team scaling (5 to 25+ engineers)
+- Architecture decisions for high-traffic systems
+- DevOps and infrastructure optimization
+- Code review and mentorship
+
+### Backend Development
+- Ruby on Rails (primary framework)
+- Python, Node.js
+- PostgreSQL, Redis, Elasticsearch
+- GraphQL, REST APIs
+
+### Frontend Development
+- React, TypeScript
+- Next.js, Vite
+- Tailwind CSS
+- State management (Redux, Zustand)
+
+### AI & Machine Learning
+- LLM integration (OpenAI, Anthropic)
+- RAG systems
+- AI-assisted product features
+- Natural language processing
+
+### Cloud & DevOps
+- AWS (primary), GCP
+- Docker, Kubernetes
+- CI/CD (GitHub Actions, CircleCI)
+- Infrastructure as Code (Terraform)
+
+## Professional Experience
+
+### Delfyn - Co-Founder & CTO (2023-Present)
+AI-first fintech platform for financial advisors. Building intelligent tools that help advisors manage client portfolios and provide personalized recommendations.
+- Led development from 0 to 1
+- Implemented RAG-based document analysis
+- Built compliant financial data pipelines
+
+### Moodwork - CTO (2020-2023)
+Mental health SaaS platform serving 100k+ enterprise users at companies like AXA, BNP Paribas, and Carrefour.
+- Scaled engineering team from 5 to 20 engineers
+- Achieved SOC2 Type II compliance
+- Built multi-tenant SSO (OAuth2, SAML2)
+- Reduced infrastructure costs by 40%
+
+### Previous Roles
+- Senior Full-stack Engineer at various startups (2014-2020)
+- Focus on e-commerce, marketplace, and B2B SaaS platforms
+
+## Blog & Writing
+
+Technical blog covering:
+- Authentication systems (OAuth2, SAML2, SSO)
+- Architecture patterns for scale
+- Engineering leadership insights
+- AI integration in products
+
+Blog URL: https://joanis.co/blog
+
+### Featured Articles
+
+#### Building a Flexible SSO Authentication System: OAuth2 & SAML2 in Rails
+URL: https://joanis.co/blog/building-flexible-sso-authentication-system
+Topics: Ruby on Rails, OAuth2, SAML2, Authentication, Enterprise Security
+Summary: Deep dive into building a multi-tenant SSO system supporting both OAuth2 and SAML2 protocols, enabling seamless integration with enterprise identity providers like Azure AD, Okta, and OneLogin.
+
+## What I Can Help With
+
+- CTO advisory and fractional CTO services
+- Technical due diligence for investors
+- Architecture review and optimization
+- Engineering team assessment and hiring
+- SaaS product development strategy
+- AI/LLM integration consulting
+
+## Open Source
+
+Active contributor to open source projects. Check GitHub profile for recent contributions.
+
+## Speaking & Consulting
+
+Available for:
+- Conference talks on engineering leadership and technical architecture
+- Consulting on SaaS scaling challenges
+- Mentorship for startup CTOs
+- Technical workshops on Ruby on Rails and React
+
+## Last Updated
+2026-01-10
+

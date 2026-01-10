@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" 
+     xmlns:atom="http://www.w3.org/2005/Atom"
+     xmlns:dc="http://purl.org/dc/elements/1.1/"
+     xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Junior Joanis - Engineering Blog</title>
+    <link>https://joanis.co/blog</link>
+    <description>Deep dives into architecture decisions, engineering leadership, and building products that scale. From authentication flows to AI integrations.</description>
+    <language>en-us</language>
+    <managingEditor>contact@joanis.co (Junior Joanis)</managingEditor>
+    <webMaster>contact@joanis.co (Junior Joanis)</webMaster>
+    <copyright>Copyright 2026 Junior Joanis. All rights reserved.</copyright>
+    <lastBuildDate>Fri, 10 Jan 2026 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://joanis.co/rss.xml" rel="self" type="application/rss+xml"/>
+    <image>
+      <url>https://joanis.co/og-image.jpg</url>
+      <title>Junior Joanis - Engineering Blog</title>
+      <link>https://joanis.co/blog</link>
+    </image>
+    
+    <item>
+      <title>Building a Flexible SSO Authentication System: OAuth2 &amp; SAML2 in Rails</title>
+      <link>https://joanis.co/blog/building-flexible-sso-authentication-system</link>
+      <guid isPermaLink="true">https://joanis.co/blog/building-flexible-sso-authentication-system</guid>
+      <pubDate>Wed, 01 Jan 2026 00:00:00 +0000</pubDate>
+      <dc:creator>Junior Joanis</dc:creator>
+      <category>Ruby on Rails</category>
+      <category>OAuth2</category>
+      <category>SAML2</category>
+      <category>Authentication</category>
+      <category>Enterprise</category>
+      <category>Security</category>
+      <description><![CDATA[How we built a multi-tenant SSO system supporting both OAuth2 and SAML2 protocols, enabling seamless integration with enterprise identity providers like Azure AD, Okta, and OneLogin.]]></description>
+      <content:encoded><![CDATA[
+        <p>Single Sign-On (SSO) has become an essential feature for enterprise applications. It allows employees to access multiple services using a single set of credentials, improving security and user experience while reducing password fatigue.</p>
+        
+        <p>In this post, we walk through how we built a flexible, multi-tenant SSO system that supports both OAuth2 and SAML2 protocols, allowing each company to configure their preferred identity provider.</p>
+        
+        <h2>Key Topics Covered</h2>
+        <ul>
+          <li>OAuth2 Authorization Code Flow with PKCE</li>
+          <li>SAML2 implementation and IdP configuration</li>
+          <li>Multi-tenant architecture for SSO</li>
+          <li>Security considerations (state parameter, certificate validation)</li>
+          <li>Domain-based SSO discovery</li>
+          <li>Platform-specific redirects (web and mobile)</li>
+        </ul>
+        
+        <p><a href="https://joanis.co/blog/building-flexible-sso-authentication-system">Read the full article →</a></p>
+      ]]></content:encoded>
+    </item>
+    
+  </channel>
+</rss>
+
