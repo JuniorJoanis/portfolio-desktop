@@ -82,6 +82,11 @@ Blog URL: https://joanis.co/blog
 
 ### Featured Articles
 
+#### Building an AI Copilot for Accounts Receivable: A Technical Deep Dive
+URL: https://joanis.co/blog/building-ai-copilot-accounts-receivable
+Topics: Python, FastAPI, LangChain, AI, Gemini, React, FinTech
+Summary: How we built an AI copilot at Delfyn that transforms how finance teams manage accounts receivable. Covers ReAct pattern implementation, LangChain agent architecture with Gemini 3, tool wrapper patterns, Redis conversation memory, streaming responses, and assistant-ui frontend integration.
+
 #### Building a Flexible SSO Authentication System: OAuth2 & SAML2 in Rails
 URL: https://joanis.co/blog/building-flexible-sso-authentication-system
 Topics: Ruby on Rails, OAuth2, SAML2, Authentication, Enterprise Security

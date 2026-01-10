@@ -20,6 +20,38 @@
     </image>
     
     <item>
+      <title>Building an AI Copilot for Accounts Receivable: A Technical Deep Dive</title>
+      <link>https://joanis.co/blog/building-ai-copilot-accounts-receivable</link>
+      <guid isPermaLink="true">https://joanis.co/blog/building-ai-copilot-accounts-receivable</guid>
+      <pubDate>Sat, 10 Jan 2026 00:00:00 +0000</pubDate>
+      <dc:creator>Junior Joanis</dc:creator>
+      <category>Python</category>
+      <category>FastAPI</category>
+      <category>LangChain</category>
+      <category>AI</category>
+      <category>Gemini</category>
+      <category>React</category>
+      <category>FinTech</category>
+      <description><![CDATA[How we built an AI copilot at Delfyn that transforms how finance teams manage accounts receivable, using Python, FastAPI, LangChain, Gemini 3, and assistant-ui for the React frontend.]]></description>
+      <content:encoded><![CDATA[
+        <p>At Delfyn, we built an AI copilot that transforms how finance teams manage accounts receivable. This post walks through our architecture decisions, implementation patterns, and the techniques that power our conversational agent.</p>
+        
+        <h2>Key Topics Covered</h2>
+        <ul>
+          <li>ReAct (Reasoning + Acting) pattern with 25+ domain-specific tools</li>
+          <li>LangChain agent architecture with Gemini 3 via Vertex AI</li>
+          <li>Tool wrapper pattern for dependency injection</li>
+          <li>Conversation memory with Redis (separated chat/tool history)</li>
+          <li>Streaming responses with visual feedback</li>
+          <li>Follow-up suggestions generation</li>
+          <li>Frontend implementation with assistant-ui</li>
+        </ul>
+        
+        <p><a href="https://joanis.co/blog/building-ai-copilot-accounts-receivable">Read the full article →</a></p>
+      ]]></content:encoded>
+    </item>
+    
+    <item>
       <title>Building a Flexible SSO Authentication System: OAuth2 &amp; SAML2 in Rails</title>
       <link>https://joanis.co/blog/building-flexible-sso-authentication-system</link>
       <guid isPermaLink="true">https://joanis.co/blog/building-flexible-sso-authentication-system</guid>
