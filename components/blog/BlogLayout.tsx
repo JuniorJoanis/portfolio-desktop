@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Github, Linkedin, Twitter, Mail } from 'lucide-react';
+import { Github, Linkedin, Twitter, Mail } from 'lucide-react';
 import { getEmailMailtoLink } from '../../utils/email';
 import { SOCIALS, BIO } from '../../constants';
 
@@ -13,10 +13,9 @@ const iconMap: Record<string, React.ReactNode> = {
 
 interface BlogLayoutProps {
   children: React.ReactNode;
-  showBackToHome?: boolean;
 }
 
-const BlogLayout: React.FC<BlogLayoutProps> = ({ children, showBackToHome = true }) => {
+const BlogLayout: React.FC<BlogLayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen bg-[#0a0f1a] text-slate-300 selection:bg-teal-500/30" style={{ fontFamily: "'DM Sans', sans-serif" }}>
       {/* Subtle noise texture overlay */}
@@ -32,15 +31,6 @@ const BlogLayout: React.FC<BlogLayoutProps> = ({ children, showBackToHome = true
       <header className="sticky top-0 z-50 border-b border-slate-800/50 bg-[#0a0f1a]/80 backdrop-blur-xl">
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            {showBackToHome && (
-              <Link 
-                to="/" 
-                className="flex items-center gap-2 text-sm text-slate-500 hover:text-teal-400 transition-colors group"
-              >
-                <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-                <span>Portfolio</span>
-              </Link>
-            )}
             <Link to="/blog" className="flex items-center gap-3 group">
               <img 
                 src={BIO.avatarUrl} 
