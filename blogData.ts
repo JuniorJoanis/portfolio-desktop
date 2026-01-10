@@ -36,6 +36,21 @@ export const BLOG_POSTS: BlogPost[] = [
 
 <p>The conversational AI agent uses a ReAct (Reasoning + Acting) pattern with 25+ domain-specific tools. The agent reasons about user intent, selects appropriate tools, executes them, and synthesizes responses—all while maintaining conversation context.</p>
 
+<h3>Why ReAct?</h3>
+
+<p>The ReAct framework, introduced by Yao et al. in 2022, fundamentally changed how we build LLM-powered agents. The key insight is deceptively simple: instead of having the model either <em>think</em> or <em>act</em>, have it do both in an interleaved fashion.</p>
+
+<p>Traditional approaches had LLMs generate a complete reasoning chain before taking action (chain-of-thought), or jump straight to actions without explicit reasoning. ReAct combines these by having the model:</p>
+
+<ol>
+  <li><strong>Generate reasoning traces</strong> — The model explains its thinking, tracks progress toward the goal, updates its plan when new information arrives, and handles edge cases gracefully</li>
+  <li><strong>Execute actions</strong> — The model interfaces with external systems (APIs, databases, tools) to gather real information rather than relying solely on its training data</li>
+</ol>
+
+<p>This matters for accounts receivable because financial operations require both <em>judgment</em> (should we offer a discount to this customer?) and <em>accuracy</em> (what's their exact outstanding balance?). ReAct lets us combine the LLM's reasoning capabilities with ground-truth data from our backend APIs.</p>
+
+<p>The research showed ReAct outperforms pure reasoning or pure action approaches on complex tasks. More importantly for enterprise use cases, the explicit reasoning traces make the agent's decisions interpretable—when our AI suggests sending a payment reminder, finance teams can see exactly why it made that recommendation.</p>
+
 <pre><code>┌─────────────────────────────────────────────────────────────────────────────┐
 │                         HIGH-LEVEL ARCHITECTURE                             │
 └─────────────────────────────────────────────────────────────────────────────┘
