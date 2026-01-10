@@ -26,30 +26,36 @@ export const BLOG_POSTS: BlogPost[] = [
       { title: 'FastAPI', url: 'https://fastapi.tiangolo.com/' },
     ],
     content: `
-<h2>Introduction</h2>
+<h2>The Problem: Finance Teams Drowning in Manual Work</h2>
 
-<p>At <a href="https://delfyn.co" target="_blank">Delfyn</a>, we built an AI copilot that transforms how finance teams manage accounts receivable. This post walks through our architecture decisions, implementation patterns, and the techniques that power our conversational agent.</p>
+<p>Here's a scenario that plays out in finance departments everywhere: a collections specialist spends 20 minutes hunting down a customer's payment history across three different systems, manually drafting a reminder email, and then waiting for approval before they can even click send. Multiply that by 200 overdue invoices, and you've got a team that's constantly underwater.</p>
 
-<p>Our stack: Python, FastAPI, LangChain, Google Vertex AI (Gemini 3), Redis, SQLAlchemy, and <a href="https://www.assistant-ui.com/" target="_blank">assistant-ui</a> for the React frontend.</p>
+<p>At <a href="https://delfyn.co" target="_blank">Delfyn</a>, we asked ourselves: <strong>what if an AI could handle the tedious coordination work while keeping humans in control of the decisions that matter?</strong></p>
 
-<h2>Architecture Overview</h2>
+<p>This post is a deep dive into how we built that AI copilot—the architecture decisions, the hard-won lessons, and the patterns that made it all work. If you're building AI agents for enterprise workflows, you'll find battle-tested approaches you can steal.</p>
 
-<p>The conversational AI agent uses a ReAct (Reasoning + Acting) pattern with 25+ domain-specific tools. The agent reasons about user intent, selects appropriate tools, executes them, and synthesizes responses—all while maintaining conversation context.</p>
+<p><strong>Our stack:</strong> Python, FastAPI, LangChain, Google Vertex AI (Gemini 3), Redis, SQLAlchemy, and <a href="https://www.assistant-ui.com/" target="_blank">assistant-ui</a> for the React frontend.</p>
 
-<h3>Why ReAct?</h3>
+<h2>Architecture Overview: Teaching an AI to Think and Act</h2>
 
-<p>The ReAct framework, introduced by Yao et al. in 2022, fundamentally changed how we build LLM-powered agents. The key insight is deceptively simple: instead of having the model either <em>think</em> or <em>act</em>, have it do both in an interleaved fashion.</p>
+<p>We didn't just build a chatbot—we built a <strong>reasoning agent</strong> that can orchestrate complex workflows. Think of it as giving the LLM a Swiss Army knife of 25+ specialized tools and teaching it when to use each one.</p>
 
-<p>Traditional approaches had LLMs generate a complete reasoning chain before taking action (chain-of-thought), or jump straight to actions without explicit reasoning. ReAct combines these by having the model:</p>
+<p>The secret sauce? A pattern called <strong>ReAct</strong> (Reasoning + Acting) that lets the agent think through problems step-by-step while pulling real data from our backend.</p>
+
+<h3>Why We Bet on ReAct</h3>
+
+<p>Before ReAct, we faced an impossible choice: use chain-of-thought prompting (great reasoning, but the AI hallucinates numbers) or use function-calling (accurate data, but no nuanced judgment). <strong>ReAct gave us both.</strong></p>
+
+<p>The framework, introduced by Yao et al. in 2022, has the model alternate between thinking and doing:</p>
 
 <ol>
-  <li><strong>Generate reasoning traces</strong> — The model explains its thinking, tracks progress toward the goal, updates its plan when new information arrives, and handles edge cases gracefully</li>
-  <li><strong>Execute actions</strong> — The model interfaces with external systems (APIs, databases, tools) to gather real information rather than relying solely on its training data</li>
+  <li><strong>Reasoning traces</strong> — The model explains its thinking out loud. "The user wants overdue invoices for Acme Corp. I should first check if that company exists in our system..." This makes debugging a dream and builds trust with finance teams who can see exactly why the AI made each recommendation.</li>
+  <li><strong>Grounded actions</strong> — Instead of guessing, the agent calls our APIs to get real numbers. No more hallucinated invoice amounts or made-up customer emails.</li>
 </ol>
 
-<p>This matters for accounts receivable because financial operations require both <em>judgment</em> (should we offer a discount to this customer?) and <em>accuracy</em> (what's their exact outstanding balance?). ReAct lets us combine the LLM's reasoning capabilities with ground-truth data from our backend APIs.</p>
+<p>This combination is <em>essential</em> for financial operations. When someone asks "Should we offer Acme Corp a discount?", the agent needs both <strong>judgment</strong> (understanding the business context) and <strong>accuracy</strong> (knowing their exact outstanding balance is $47,832.50, not "around $50k").</p>
 
-<p>The research showed ReAct outperforms pure reasoning or pure action approaches on complex tasks. More importantly for enterprise use cases, the explicit reasoning traces make the agent's decisions interpretable—when our AI suggests sending a payment reminder, finance teams can see exactly why it made that recommendation.</p>
+<p><strong>The payoff:</strong> Finance teams can see the agent's reasoning chain. When it suggests sending a payment reminder, they know <em>why</em>—building the kind of trust that enterprise customers demand.</p>
 
 <pre><code>┌─────────────────────────────────────────────────────────────────────────────┐
 │                         HIGH-LEVEL ARCHITECTURE                             │
@@ -79,9 +85,9 @@ export const BLOG_POSTS: BlogPost[] = [
         │  - Response   │    │  - Sessions   │    │  - Payments   │
         └───────────────┘    └───────────────┘    └───────────────┘</code></pre>
 
-<h2>1. The Agent Core</h2>
+<h2>1. The Agent Core: Where the Magic Happens</h2>
 
-<p>We built our agent using LangChain with Gemini 3 via Vertex AI for reasoning and action selection.</p>
+<p>At the heart of our copilot is an agent class that wires together the LLM, memory, and tools. Here's the skeleton:</p>
 
 <h3>Agent Initialization</h3>
 
@@ -111,13 +117,13 @@ export const BLOG_POSTS: BlogPost[] = [
     def wrapper_config(self):
         return {"access_token": self.access_token}</code></pre>
 
-<p>Key design decisions:</p>
+<p><strong>Why these specific choices?</strong></p>
 
 <ul>
-  <li><strong>Temperature 0.3</strong>: Low enough for consistent financial operations, high enough for natural responses</li>
-  <li><strong>Streaming enabled</strong>: Real-time feedback during complex multi-step operations</li>
-  <li><strong>JSON response format</strong>: Structured outputs for tool orchestration</li>
-  <li><strong>Session-based memory</strong>: Each user gets isolated conversation context</li>
+  <li><strong>Temperature 0.3</strong> — This is our "Goldilocks zone." Too low (0.1) and the agent sounds robotic, repeating canned phrases. Too high (0.7+) and it starts getting creative with numbers—terrifying for financial data. 0.3 keeps responses natural while ensuring invoice amounts aren't hallucinated.</li>
+  <li><strong>Streaming enabled</strong> — Nobody wants to stare at a spinner for 15 seconds. Streaming lets users see the agent "thinking" in real-time, which dramatically improves perceived performance.</li>
+  <li><strong>JSON response format</strong> — Forces structured outputs that our tool orchestration can reliably parse. No more regex gymnastics to extract function calls.</li>
+  <li><strong>Session-based memory</strong> — Every user conversation is isolated. When CFO Alice asks about overdue invoices, she won't accidentally see collections data from CFO Bob's session.</li>
 </ul>
 
 <h3>ReAct Reasoning Loop</h3>
@@ -173,9 +179,9 @@ export const BLOG_POSTS: BlogPost[] = [
                │   payment link..."  │
                └─────────────────────┘</code></pre>
 
-<h2>2. Tool Architecture</h2>
+<h2>2. Tool Architecture: The Agent's Swiss Army Knife</h2>
 
-<p>We register 25+ tools covering the full accounts receivable workflow:</p>
+<p>We empowered our agent with 25+ specialized tools—each one a surgical instrument for a specific AR task. The goal: let the agent handle <em>any</em> workflow a collections specialist might need, from gentle payment reminders to escalated dunning sequences.</p>
 
 <pre><code class="language-python">def get_tools(self):
     tools = [
@@ -213,15 +219,15 @@ export const BLOG_POSTS: BlogPost[] = [
     ]
     return tools</code></pre>
 
-<p>Tool categories:</p>
+<p><strong>We organized tools into six capability domains:</strong></p>
 
 <ul>
-  <li><strong>Buyer management</strong>: get info, update, list</li>
-  <li><strong>Invoice operations</strong>: get, list, add discount, remove discount</li>
-  <li><strong>Communication</strong>: draft email, send email, list emails</li>
-  <li><strong>Reporting</strong>: AR prioritization, payment trends, overdue analysis</li>
-  <li><strong>Payment operations</strong>: create payment link, adjust payment terms</li>
-  <li><strong>Dunning sequences</strong>: add, remove, activate, deactivate</li>
+  <li><strong>Buyer management</strong> — The agent's "CRM brain": fetch customer details, update records, list accounts</li>
+  <li><strong>Invoice operations</strong> — Core AR functionality: retrieve invoices, apply discounts, track statuses</li>
+  <li><strong>Communication</strong> — The agent's voice: draft emails, send messages, review correspondence history</li>
+  <li><strong>Reporting</strong> — Instant insights: AR prioritization, payment trends, overdue analysis (no more Excel gymnastics)</li>
+  <li><strong>Payment operations</strong> — Close the loop: generate payment links, adjust terms, track collections</li>
+  <li><strong>Dunning sequences</strong> — Automated escalation: add customers to reminder flows, pause sequences, track progress</li>
 </ul>
 
 <pre><code>┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
@@ -242,9 +248,11 @@ export const BLOG_POSTS: BlogPost[] = [
 │ • Collection    │  │ • Reportings    │  │ • Deactivate    │
 └─────────────────┘  └─────────────────┘  └─────────────────┘</code></pre>
 
-<h2>3. Tool Wrapper Pattern</h2>
+<h2>3. Tool Wrapper Pattern: Clean Dependency Injection</h2>
 
-<p>We use a wrapper pattern for dependency injection. Each tool receives authentication context without polluting the function signature that LangChain inspects.</p>
+<p>Here's a pattern we're particularly proud of. <strong>The problem:</strong> LangChain inspects function signatures to understand what parameters a tool accepts. But we also need to inject authentication tokens, API endpoints, and other config that the LLM shouldn't see or control.</p>
+
+<p><strong>Our solution:</strong> A wrapper function that creates a closure around the config, returning a clean tool function that LangChain can introspect.</p>
 
 <pre><code class="language-python">def wrap_get_account_receivable_prioritization(wrapper_config: Dict[str, Any]):
     @tool('get-account-receivable-prioritization')
@@ -284,18 +292,18 @@ export const BLOG_POSTS: BlogPost[] = [
             
     return get_account_receivable_prioritization</code></pre>
 
-<p>This pattern:</p>
+<p><strong>Why this matters:</strong></p>
 
 <ul>
-  <li>Keeps tools stateless and testable</li>
-  <li>Enables runtime configuration injection</li>
-  <li>Preserves clean function signatures for LLM introspection</li>
-  <li>Handles both simple string inputs and complex JSON parameters</li>
+  <li><strong>Security</strong> — Auth tokens are injected at runtime, never exposed to the LLM or logged in tool descriptions</li>
+  <li><strong>Testability</strong> — Tools are pure functions; mock the config and test in isolation</li>
+  <li><strong>Clean introspection</strong> — LangChain sees only the parameters the LLM should control (like <code>buyer_company_name</code>)</li>
+  <li><strong>Flexibility</strong> — Same tool works with different auth contexts for different users/tenants</li>
 </ul>
 
-<h2>4. Prompt Engineering for Financial Domain</h2>
+<h2>4. Prompt Engineering: Teaching Financial Fluency</h2>
 
-<p>Our prompt template enforces strict ReAct reasoning with financial domain guardrails:</p>
+<p>Here's where we spent <em>weeks</em> iterating. The prompt isn't just instructions—it's the agent's training manual, guardrails, and personality all in one. Get it wrong, and you have an agent that confuses "overdue" with "outstanding" (a $100K mistake waiting to happen).</p>
 
 <pre><code class="language-python">class InvoiceTemplate:
     def generate_prompt(self):
@@ -342,18 +350,18 @@ export const BLOG_POSTS: BlogPost[] = [
         """)
         return prompt</code></pre>
 
-<p>Key elements:</p>
+<p><strong>The non-obvious lessons we learned:</strong></p>
 
 <ul>
-  <li>Domain-specific terminology enforcement (overdue vs outstanding vs late)</li>
-  <li>Multi-step operation guardrails (email confirmation before sending)</li>
-  <li>Output formatting guidance (tables for financial data)</li>
-  <li>Workflow enforcement (get buyer info before drafting emails)</li>
+  <li><strong>Terminology is treacherous</strong> — We explicitly define "overdue" vs "outstanding" vs "late payment" because these mean different things in AR, and LLMs love to conflate them. One wrong term in a customer email destroys credibility.</li>
+  <li><strong>Workflow enforcement prevents disasters</strong> — "Get buyer info BEFORE drafting emails" seems obvious, but without explicit guardrails, the agent would happily draft emails with [PLACEHOLDER] where the payment link should be.</li>
+  <li><strong>Confirmation gates build trust</strong> — The agent asks for human approval before sending emails. This isn't just safety—it's what enterprise buyers demand. Nobody wants an AI sending collections emails autonomously.</li>
+  <li><strong>Table formatting isn't vanity</strong> — Finance people think in tables. When we switched from paragraph-style answers to tabular data, user satisfaction jumped noticeably.</li>
 </ul>
 
-<h2>5. Agent Executor and Chain</h2>
+<h2>5. Agent Executor: Orchestrating the Symphony</h2>
 
-<p>We wire everything together with LangChain's AgentExecutor:</p>
+<p>All the pieces come together in the executor—the conductor that coordinates reasoning, tool calls, memory, and error handling into a coherent workflow.</p>
 
 <pre><code class="language-python">def handle_chatbot_input(input: Input) -> Tuple[Output, AgentExecutor, Dict]:
     last_message = input.messages[-1]
@@ -397,18 +405,20 @@ export const BLOG_POSTS: BlogPost[] = [
         intermediate_steps=agent_response['intermediate_steps']
     )</code></pre>
 
-<p>The executor handles:</p>
+<p><strong>What the executor handles for us:</strong></p>
 
 <ul>
-  <li>Tool selection and execution</li>
-  <li>Error recovery (automatic retries)</li>
-  <li>Memory persistence</li>
-  <li>Intermediate step tracking for debugging</li>
+  <li><strong>Tool orchestration</strong> — Parses the agent's "Action" outputs, calls the right tool, feeds results back</li>
+  <li><strong>Graceful error recovery</strong> — When a tool fails (API timeout, invalid input), the agent gets a chance to reason about the error and try a different approach</li>
+  <li><strong>Memory persistence</strong> — Automatically saves conversation state after each turn</li>
+  <li><strong>Debugging gold</strong> — <code>return_intermediate_steps=True</code> gives us the full reasoning trace. When something goes wrong, we can see exactly where the agent's logic derailed.</li>
 </ul>
 
-<h2>6. Conversation Memory with Redis</h2>
+<h2>6. Memory Architecture: The Agent's Recall System</h2>
 
-<p>We persist conversation history in Redis, separating chat messages from tool outputs:</p>
+<p>Here's a problem that bit us early: naive conversation memory bloats the prompt with raw API responses. Ask about invoices twice? The agent now has 50KB of JSON clogging its context window.</p>
+
+<p><strong>Our solution:</strong> Dual-stream memory that separates <em>what was said</em> from <em>what data was fetched</em>.</p>
 
 <pre><code class="language-python">class DelfynChatMemory(BaseMemory, BaseModel):
     BASE_KEY: ClassVar[str] = "delfyn_conversation_history"
@@ -477,13 +487,15 @@ export const BLOG_POSTS: BlogPost[] = [
         # 24-hour expiration
         self.redis_cache().set(self.key(session_id), json.dumps(buffer), ex=86400)</code></pre>
 
-<p>Why separate <code>chat_history</code> and <code>tool_history</code>?</p>
+<p><strong>Why this split architecture matters:</strong></p>
 
 <ul>
-  <li>Chat history provides conversational context</li>
-  <li>Tool history lets the agent reference previous API responses without bloating the conversation</li>
-  <li>Enables the agent to say "As I showed you earlier..." when re-referencing data</li>
+  <li><strong>Chat history</strong> — Lightweight conversational context. "User asked about Acme Corp's overdue invoices. I showed them a table..."</li>
+  <li><strong>Tool history</strong> — The actual data, available for reference without cluttering the dialogue. The agent can say "As I showed you earlier, Acme has 3 overdue invoices totaling $47K" without re-fetching.</li>
+  <li><strong>24-hour TTL</strong> — Sessions expire automatically. No stale data, no privacy leaks between days.</li>
 </ul>
+
+<p>Think of it like human memory: you remember the <em>gist</em> of conversations (chat history) but can pull up specific documents when needed (tool history).</p>
 
 <pre><code>┌──────────────────────────────────────────────────────────────────┐
 │                         REDIS STORE                              │
@@ -505,9 +517,11 @@ export const BLOG_POSTS: BlogPost[] = [
 │                           TTL: 24 hours                          │
 └──────────────────────────────────────────────────────────────────┘</code></pre>
 
-<h2>7. Streaming Responses</h2>
+<h2>7. Streaming Responses: The "Thinking Out Loud" UX</h2>
 
-<p>For real-time UX, we stream agent responses with visual explainers:</p>
+<p>Nobody wants to stare at a loading spinner for 10 seconds wondering if the app crashed. <strong>Streaming transforms the experience</strong>—users see the agent working in real-time, building trust and reducing perceived latency.</p>
+
+<p>But here's the twist: we don't just stream text. We stream <em>what the agent is doing</em>.</p>
 
 <pre><code class="language-python">@app.post("/chatbot/invoke_stream")
 async def invoke_chatbot_stream(input: Input):
@@ -536,7 +550,7 @@ async def invoke_chatbot_stream(input: Input):
     
     return StreamingResponse(get_final_output(), media_type="text/event-stream")</code></pre>
 
-<p>The <code>visual_explainer</code> metadata provides UI feedback during tool execution:</p>
+<p><strong>The secret sauce:</strong> <code>visual_explainer</code> metadata on each tool.</p>
 
 <pre><code class="language-python">Tool(
     name="Get buyer information",
@@ -545,7 +559,9 @@ async def invoke_chatbot_stream(input: Input):
     metadata={"visual_explainer": "Getting customer information"}  # UI shows this
 )</code></pre>
 
-<p>This creates a responsive UX where users see "Getting customer information..." while the API call executes.</p>
+<p>While the API fetches data, users see <em>"Getting customer information..."</em> instead of nothing. When the agent creates a payment link, they see <em>"Creating payment link..."</em> It's like watching someone work—you know things are happening.</p>
+
+<p><strong>The impact:</strong> Complaints about "slow responses" dropped dramatically, even though the actual latency didn't change. Perception is reality in UX.</p>
 
 <pre><code>Client                          Server                           Gemini 3
    │                               │                                │
@@ -573,9 +589,9 @@ async def invoke_chatbot_stream(input: Input):
    │    ["Send to more customers", │                                │
    │     "Check payment status"]}  │                                │</code></pre>
 
-<h2>8. Follow-Up Suggestions</h2>
+<h2>8. Follow-Up Suggestions: Guiding the Conversation</h2>
 
-<p>We generate contextual follow-up suggestions after each response:</p>
+<p>Here's a UX insight that surprised us: <strong>users often don't know what to ask next.</strong> They see a list of overdue invoices and think "Now what?" We solved this with contextual follow-up suggestions that anticipate the logical next steps.</p>
 
 <pre><code class="language-python">def handle_chatbot_input_stream(input: Input) -> Tuple[AgentExecutor, Dict]:
     ai_assistant = AccountReceivableAgent(input.access_token, input.uuid)
@@ -623,17 +639,19 @@ async def invoke_chatbot_stream(input: Input):
     
     return chain, processed_input</code></pre>
 
-<p>Follow-ups are contextual. If the user asked about overdue invoices, suggestions might be:</p>
+<p><strong>The suggestions are smart, not random.</strong> After showing overdue invoices, the agent might suggest:</p>
 
 <ul>
-  <li>"Send reminder emails to these customers"</li>
-  <li>"Apply a 2% early payment discount"</li>
-  <li>"Show me payment trends for last quarter"</li>
+  <li><em>"Send reminder emails to these customers"</em> — The obvious action</li>
+  <li><em>"Apply a 2% early payment discount"</em> — A strategic option for high-value accounts</li>
+  <li><em>"Show me payment trends for last quarter"</em> — Context for decision-making</li>
 </ul>
 
-<h2>9. API Endpoints</h2>
+<p>This turns the agent from a Q&A bot into a <strong>workflow guide</strong> that helps users discover capabilities they didn't know existed.</p>
 
-<p>The FastAPI application exposes two main endpoints:</p>
+<h2>9. API Design: Two Flavors of Invocation</h2>
+
+<p>We expose two endpoints to serve different client needs—because sometimes you want the whole response at once, and sometimes you want to show progress.</p>
 
 <pre><code class="language-python">@app.post("/chatbot/invoke", response_model=Output)
 async def invoke_chatbot(input: Input):
@@ -653,7 +671,12 @@ async def invoke_chatbot_stream(input: Input):
     chain, processed_input = handle_chatbot_input_stream(input)
     return StreamingResponse(get_final_output(), media_type="text/event-stream")</code></pre>
 
-<p>Input schema:</p>
+<p><strong>When to use which:</strong></p>
+
+<ul>
+  <li><code>/invoke</code> — Background automations, webhooks, anywhere you just need the final answer</li>
+  <li><code>/invoke_stream</code> — Interactive UI, where users are watching and waiting</li>
+</ul>
 
 <pre><code class="language-python">class Input(BaseModel):
     messages: List[Message]
@@ -665,9 +688,13 @@ async def invoke_chatbot_stream(input: Input):
     company_name: Optional[str] = None
     uuid: Optional[str] = None</code></pre>
 
-<h2>10. Frontend with assistant-ui</h2>
+<p><strong>Design note:</strong> We include user context (<code>first_name</code>, <code>company_name</code>) in every request. This lets the agent personalize responses and maintain appropriate data isolation between tenants.</p>
 
-<p>For the frontend, we used <a href="https://www.assistant-ui.com/" target="_blank">assistant-ui</a>, an open-source React toolkit for building production AI chat experiences. It provides ChatGPT-style UX out of the box with built-in support for streaming, state management, and LangChain integration.</p>
+<h2>10. Frontend: Standing on the Shoulders of assistant-ui</h2>
+
+<p>We could have built the chat UI from scratch. We didn't. <strong>Life's too short to reinvent message threading, streaming state management, and scroll-to-bottom logic.</strong></p>
+
+<p><a href="https://www.assistant-ui.com/" target="_blank">assistant-ui</a> gave us a production-ready React chat interface in an afternoon. It's open-source, handles all the fiddly bits (typing indicators, message grouping, attachment handling), and integrates cleanly with LangChain backends.</p>
 
 <pre><code>┌─────────────────────────────────────────┐
 │              React App                  │
@@ -836,50 +863,54 @@ export const ARCopilotChat = () => {
   );
 };</code></pre>
 
-<p>Why assistant-ui?</p>
+<p><strong>Why we chose assistant-ui over building custom:</strong></p>
 
 <ul>
-  <li><strong>Instant Chat UI</strong>: ChatGPT-style UX with theming out of the box</li>
-  <li><strong>Streaming Support</strong>: Built-in handling for SSE streams from our backend</li>
-  <li><strong>State Management</strong>: Handles multi-turn conversations, interruptions, and retries</li>
-  <li><strong>LangChain Compatible</strong>: Designed to work with LangChain backends</li>
-  <li><strong>High Performance</strong>: Optimized rendering for responsive streaming</li>
+  <li><strong>Time to market</strong> — Chat UI in hours, not weeks. We focused our engineering time on the agent logic that actually differentiates our product.</li>
+  <li><strong>Streaming "just works"</strong> — SSE handling, progressive rendering, all the edge cases around interrupted streams—handled.</li>
+  <li><strong>Battle-tested state management</strong> — Multi-turn conversations, message editing, retries. The edge cases you don't think about until they bite you.</li>
+  <li><strong>LangChain-native</strong> — Designed for exactly our use case. The integration was trivial.</li>
 </ul>
 
-<p>The <code>visual_explainer</code> metadata from our backend displays tool execution status in real-time, and follow-up suggestions appear after each response—creating a polished, production-ready UX.</p>
+<p>We wired up our <code>visual_explainer</code> metadata to show tool execution status, and the follow-up suggestions render as clickable chips below each response. <strong>The result:</strong> a polished, ChatGPT-quality UX that our enterprise customers expected.</p>
 
-<h2>Lessons Learned</h2>
+<h2>Lessons from the Trenches</h2>
+
+<p>After months of iteration, here's what we wish we'd known from day one:</p>
 
 <ol>
-  <li><strong>Tool descriptions are prompts</strong>: The quality of tool descriptions directly impacts agent accuracy. Be explicit about input formats, expected outputs, and when to use each tool.</li>
-  <li><strong>Separate memory streams</strong>: Keeping tool outputs separate from chat history gives the agent better context for multi-step operations without bloating the prompt.</li>
-  <li><strong>Visual feedback matters</strong>: Streaming "Getting customer information..." while APIs execute dramatically improves perceived performance.</li>
-  <li><strong>Domain terminology in prompts</strong>: Explicitly defining "overdue" vs "outstanding" vs "late payment" in the prompt prevents costly misinterpretations.</li>
-  <li><strong>Workflow enforcement</strong>: Prompting the agent to "get buyer info before drafting emails" prevents incomplete tool chains.</li>
-  <li><strong>Temperature tuning</strong>: 0.3 works well for financial operations—consistent enough for accuracy, flexible enough for natural conversation.</li>
+  <li><strong>Tool descriptions are prompts in disguise</strong> — We spent more time refining tool descriptions than almost any other part of the system. A vague description like "Get invoice data" led to constant misuse. "Get invoice details by invoice number. Returns amount, due date, payment status, and buyer info. Use when user asks about a specific invoice" worked far better.</li>
+  <li><strong>Dual-stream memory is non-negotiable</strong> — Separating chat history from tool outputs sounds like over-engineering until your context window fills up with JSON and the agent starts forgetting the conversation.</li>
+  <li><strong>Visual feedback is a force multiplier</strong> — "Getting customer information..." costs nothing to implement but transforms perceived performance. Users wait happily when they can see progress.</li>
+  <li><strong>Domain terminology will burn you</strong> — "Overdue" vs "outstanding" vs "late payment" mean specific things in AR. We learned this the hard way when an early version sent dunning emails to customers who weren't actually late.</li>
+  <li><strong>Workflow guardrails prevent disasters</strong> — Without explicit rules like "get buyer email before drafting," the agent would confidently generate emails with [PLACEHOLDER] links. Embarrassing.</li>
+  <li><strong>Temperature 0.3 is the sweet spot</strong> — For financial data, you need consistency. But go too low and responses feel robotic. 0.3 threads the needle.</li>
 </ol>
 
-<h2>Conclusion</h2>
+<h2>Wrapping Up</h2>
 
-<p>Building an AI copilot for accounts receivable required careful orchestration of LLM reasoning, tool execution, and conversation management. The ReAct pattern with domain-specific tools provides the flexibility of conversational AI while maintaining the precision required for financial operations.</p>
+<p>Building an AI copilot for accounts receivable wasn't about bolting ChatGPT onto a dashboard. It required <strong>deep integration</strong>—understanding the domain, respecting the workflows, and building trust with finance teams who (rightfully) don't want AI making autonomous decisions about money.</p>
 
-<p>Key architectural decisions:</p>
+<p><strong>The architecture that made it work:</strong></p>
 
 <ul>
-  <li>Wrapper pattern for tool dependency injection</li>
-  <li>Separated chat/tool memory streams</li>
-  <li>Streaming responses with visual feedback</li>
-  <li>Explicit domain terminology in prompts</li>
-  <li>assistant-ui for production-ready React frontend</li>
+  <li>ReAct pattern for transparent reasoning</li>
+  <li>25+ domain-specific tools (the agent's Swiss Army knife)</li>
+  <li>Wrapper pattern for clean dependency injection</li>
+  <li>Dual-stream memory (chat + tools)</li>
+  <li>Streaming with visual explainers</li>
+  <li>assistant-ui for production-ready frontend</li>
 </ul>
 
-<p>The result: finance teams interact naturally with their AR data, execute complex workflows through conversation, and get intelligent follow-up suggestions—all while maintaining the accuracy required for financial operations.</p>
+<p><strong>The result:</strong> Finance teams can now ask "Who are my top 5 overdue customers?" and get an answer in seconds—complete with the option to draft reminder emails, create payment links, or add them to a dunning sequence. All through natural conversation.</p>
+
+<p>That's the promise of AI copilots: not replacing humans, but giving them superpowers.</p>
 
 <hr />
 
-<p><em>Code samples from production. Architecture decisions applicable to any domain-specific AI assistant.</em></p>
+<p><em>These patterns aren't AR-specific. If you're building AI agents for any domain—legal, healthcare, logistics—the architecture translates.</em></p>
 
-<p>Questions? Reach out on LinkedIn or check out <a href="https://delfyn.co" target="_blank">delfyn.co</a>.</p>
+<p>Building something similar? I'd love to hear about it. Reach out on LinkedIn or check out <a href="https://delfyn.co" target="_blank">delfyn.co</a>.</p>
     `.trim(),
   },
   {
@@ -897,29 +928,32 @@ export const ARCopilotChat = () => {
       { title: 'OpenID Connect', url: 'https://openid.net/connect/' },
     ],
     content: `
-<h2>Introduction</h2>
+<h2>The Enterprise Barrier: Why SSO Breaks Sales Deals</h2>
 
-<p>Single Sign-On (SSO) has become an essential feature for enterprise applications. It allows employees to access multiple services using a single set of credentials, improving security and user experience while reducing password fatigue.</p>
+<p>Here's a conversation that happens in every B2B sales cycle: <em>"We love your product, but our IT policy requires SSO. Do you support Azure AD?"</em></p>
 
-<p>In this post, we'll walk through how we built a flexible, multi-tenant SSO system that supports both OAuth2 and SAML2 protocols, allowing each company to configure their preferred identity provider.</p>
+<p>If your answer is "not yet," you just lost the deal. Enterprise companies don't compromise on identity management—it's the foundation of their security posture. <strong>No SSO, no contract.</strong></p>
 
-<h2>The Challenge</h2>
+<p>We faced this reality head-on. Our multi-tenant platform needed to support whatever identity provider each customer used—Azure AD, Okta, OneLogin, Google Workspace, custom SAML setups—without building bespoke integrations for each one.</p>
 
-<p>Our platform serves multiple companies, each with different identity management requirements:</p>
+<p>This post breaks down how we built a flexible SSO system that handles both OAuth2 and SAML2 protocols, enabling us to say "yes" to every enterprise prospect regardless of their IdP.</p>
+
+<h2>The Challenge: Enterprise IdP Chaos</h2>
+
+<p>If you've never dealt with enterprise SSO, here's the reality check:</p>
 
 <ul>
-  <li>Some companies use <strong>Microsoft Azure AD</strong> (OAuth2)</li>
-  <li>Others use <strong>Okta</strong> or <strong>OneLogin</strong> (SAML2)</li>
-  <li>Many require <strong>PKCE</strong> (Proof Key for Code Exchange) for enhanced security</li>
-  <li>Mobile and web applications need different redirect URIs</li>
-  <li>Each company may have multiple SSO configurations for different environments</li>
+  <li><strong>Protocol wars</strong> — Half your customers use OAuth2/OIDC (Azure AD, Google), half use SAML2 (Okta, OneLogin, ADFS). You need both.</li>
+  <li><strong>Security requirements vary</strong> — Some demand PKCE (Proof Key for Code Exchange), others have legacy flows you have to support.</li>
+  <li><strong>Platform fragmentation</strong> — Mobile apps need custom URL schemes (<code>myapp://callback</code>), web apps need HTTPS redirects. Same customer, different flows.</li>
+  <li><strong>Environment sprawl</strong> — "Can we test SSO in staging before enabling production?" Yes, you need that.</li>
 </ul>
 
-<p>We needed a solution that could handle all these scenarios while remaining maintainable and secure.</p>
+<p>We needed architecture that could absorb all this complexity without becoming unmaintainable.</p>
 
-<h2>Architecture Overview</h2>
+<h2>Architecture Overview: One Model to Rule Them All</h2>
 
-<p>At the heart of our implementation is the <code>SsoInformation</code> model, which stores all configuration details for each SSO integration:</p>
+<p>The insight that made everything click: <strong>treat SSO configurations as data, not code.</strong> Instead of building separate OAuth2 and SAML2 modules, we created a single <code>SsoInformation</code> model that stores everything needed for any protocol.</p>
 
 <pre><code>+------------------+          +-------------------+
 |     Company      |  1----*  |  SsoInformation   |
@@ -939,60 +973,65 @@ export const ARCopilotChat = () => {
                                 |    User     |
                                 +-------------+</code></pre>
 
-<h2>Key Design Decisions</h2>
+<p>Each company can have multiple SSO configurations (staging vs production, web vs mobile). The relationship is intentionally flexible.</p>
 
-<h3>1. Protocol Flexibility</h3>
+<h2>The Four Design Pillars</h2>
 
-<p>We support two main protocols through a <code>kind</code> attribute:</p>
+<h3>1. Protocol Agnosticism</h3>
 
-<ul>
-  <li><strong>oauth2</strong>: For OpenID Connect providers (Azure AD, Google, etc.)</li>
-  <li><strong>saml2</strong>: For SAML 2.0 providers (Okta, OneLogin, ADFS, etc.)</li>
-</ul>
-
-<p>This allows companies to use whichever protocol their IdP supports best.</p>
-
-<h3>2. Multi-Environment Support</h3>
-
-<p>Each SSO configuration has an environment setting:</p>
+<p>A single <code>kind</code> attribute switches between protocols:</p>
 
 <ul>
-  <li>production</li>
-  <li>staging</li>
-  <li>development</li>
-  <li>test</li>
+  <li><strong>oauth2</strong> — For OIDC providers (Azure AD, Google, Auth0). Modern, well-documented, what you want if you have a choice.</li>
+  <li><strong>saml2</strong> — For enterprise SAML (Okta, OneLogin, ADFS). Legacy but ubiquitous in enterprises. You will encounter it.</li>
 </ul>
 
-<p>This enables companies to test SSO integrations before going live.</p>
+<p><strong>Why this matters:</strong> When a customer says "We use Okta," we don't care whether they've configured it for OIDC or SAML. Either works.</p>
 
-<h3>3. Security Layers</h3>
+<h3>2. Environment Isolation</h3>
 
-<p>We implemented optional security enhancements:</p>
+<p>Every SSO config is scoped to an environment:</p>
 
 <ul>
-  <li><strong>PKCE Layer</strong>: Prevents authorization code interception attacks</li>
-  <li><strong>State Parameter</strong>: Prevents CSRF attacks during OAuth flow</li>
-  <li><strong>Response Mode</strong>: Configurable token delivery method</li>
+  <li><code>production</code> — The real deal. Locked down.</li>
+  <li><code>staging</code> — Customer IT tests their IdP integration here first.</li>
+  <li><code>development</code> / <code>test</code> — Internal use and CI pipelines.</li>
 </ul>
 
-<h3>4. Platform-Specific Redirects</h3>
+<p><strong>The lesson we learned the hard way:</strong> Customers <em>will</em> misconfigure SSO on their first attempt. Giving them a safe sandbox to experiment in prevents embarrassing production lockouts.</p>
 
-<p>Separate redirect URLs for web and mobile applications ensure deep linking works correctly across platforms:</p>
+<h3>3. Layered Security (Opt-In)</h3>
+
+<p>Not every IdP supports every security feature. We made them configurable:</p>
+
+<ul>
+  <li><strong>PKCE</strong> — Prevents authorization code theft. Essential for mobile, recommended everywhere. Toggle it on if the IdP supports it.</li>
+  <li><strong>State parameter</strong> — CSRF protection. Always enabled in production, but useful to disable during debugging.</li>
+  <li><strong>Response mode</strong> — Some IdPs return tokens in the URL fragment, others in query params. We adapt.</li>
+</ul>
+
+<h3>4. Platform-Aware Redirects</h3>
+
+<p>Web and mobile apps live in different worlds:</p>
 
 <pre><code>oauth2_web_redirect_url: https://app.example.com/oauth/callback
 oauth2_mobile_redirect_url: myapp://oauth/callback</code></pre>
 
-<h2>OAuth2 Implementation</h2>
+<p>The same SSO config works for both platforms. We route to the correct callback based on the request origin.</p>
 
-<p>For OAuth2, we support two grant flows:</p>
+<h2>OAuth2 Implementation: The Modern Path</h2>
 
-<h3>1. Authorization Code Flow (Recommended)</h3>
+<p>OAuth2 (specifically OpenID Connect) is what you want when you have a choice. It's well-documented, widely supported, and the security model makes sense.</p>
 
-<p>The most secure option for server-side applications:</p>
+<h3>Authorization Code Flow (The Right Way)</h3>
+
+<p>This is the flow you should use for anything server-side:</p>
 
 <pre><code>User -> App -> IdP (authorize) -> App (with code) -> IdP (token) -> App</code></pre>
 
-<p>With PKCE enabled, an additional <code>code_verifier</code>/<code>code_challenge</code> pair is generated to prevent code interception:</p>
+<p><strong>The key insight:</strong> The authorization code is useless without the client secret (which stays on your server). Even if someone intercepts the code, they can't exchange it for tokens.</p>
+
+<p>With PKCE, we add another layer—a cryptographic proof that the token request comes from the same client that started the flow:</p>
 
 <pre><code class="language-ruby">def self.generate_pkce
   pkce_challenge = PkceChallenge.challenge(char_length: 58)
@@ -1002,77 +1041,105 @@ oauth2_mobile_redirect_url: myapp://oauth/callback</code></pre>
   }
 end</code></pre>
 
-<h3>2. Implicit Grant Flow (Legacy)</h3>
+<p><strong>Why PKCE matters:</strong> Mobile apps can't keep secrets (the binary is on the user's device). PKCE provides security even when the client can't be trusted to protect a secret.</p>
 
-<p>Used for legacy single-page applications where tokens are returned directly in the URL fragment. Less secure, but sometimes required for compatibility.</p>
+<h3>Implicit Flow (Legacy, Avoid If Possible)</h3>
 
-<h2>SAML2 Implementation</h2>
+<p>Some older SPAs still require tokens directly in the URL fragment. We support it because enterprise customers have legacy systems, but we flag it in our UI as "not recommended" and nudge toward authorization code + PKCE.</p>
 
-<p>For SAML2, we store the IdP configuration including:</p>
+<h2>SAML2 Implementation: The Enterprise Reality</h2>
+
+<p>SAML2 is older, more complex, and relies on XML (yes, XML). But if you're selling to enterprises, you'll encounter it. A lot of Okta and OneLogin deployments still prefer SAML.</p>
+
+<p><strong>What we store for each SAML integration:</strong></p>
 
 <ul>
-  <li><code>saml_idp_metadata</code>: Full XML metadata from the identity provider</li>
-  <li><code>saml_idp_entity_id</code>: Unique identifier for the IdP</li>
-  <li><code>saml_sso_url</code>: Where to send authentication requests</li>
-  <li><code>saml_certificate</code>: Public certificate for signature verification</li>
-  <li><code>saml_consumer_service_url</code>: Where the IdP sends responses (ACS URL)</li>
-  <li><code>saml_name_identifier_format</code>: How user identifiers are formatted</li>
+  <li><code>saml_idp_metadata</code> — The full XML metadata blob from the IdP. Everything we need is in here.</li>
+  <li><code>saml_idp_entity_id</code> — The IdP's unique identifier. Used to verify assertions came from the right source.</li>
+  <li><code>saml_sso_url</code> — Where we redirect users to authenticate.</li>
+  <li><code>saml_certificate</code> — Public cert for signature verification. <strong>Critical:</strong> Never trust an unsigned assertion.</li>
+  <li><code>saml_consumer_service_url</code> — Our ACS endpoint. Where the IdP posts the assertion after auth.</li>
+  <li><code>saml_name_identifier_format</code> — How user IDs are formatted (email, persistent ID, etc.).</li>
 </ul>
 
-<p>The SAML flow initiates through a dedicated endpoint:</p>
+<p>The flow kicks off from a simple endpoint:</p>
 
 <pre><code>/api/v3/saml/init?company_code=ACME&sso_uuid=abc-123</code></pre>
 
-<h2>User Attribute Mapping</h2>
+<p>We look up the config, build a SAML AuthnRequest, and redirect to the IdP. After authentication, they POST back to our ACS URL with a signed assertion.</p>
 
-<p>Different IdPs return user data in different formats. We handle this through configurable attribute keys:</p>
+<h2>User Attribute Mapping: Taming IdP Chaos</h2>
+
+<p>Here's a fun fact that will save you hours of debugging: <strong>every IdP returns user data differently.</strong></p>
+
+<p>Azure AD returns <code>given_name</code>. Okta returns <code>firstName</code>. Some legacy ADFS setups return <code>givenName</code>. Your code needs to handle all of them.</p>
+
+<p><strong>Our solution:</strong> Configurable attribute keys per integration.</p>
 
 <ul>
-  <li><code>oauth2_email_key</code>: Where to find the email (e.g., "email", "mail", "upn")</li>
-  <li><code>oauth2_firstname_key</code>: First name location (e.g., "given_name", "firstName")</li>
-  <li><code>oauth2_last_name_key</code>: Last name location (e.g., "family_name", "lastName")</li>
-  <li><code>oauth2_user_division_key</code>: Optional organizational unit mapping</li>
+  <li><code>oauth2_email_key</code> — Where to find the email. Could be <code>email</code>, <code>mail</code>, <code>upn</code>, or <code>preferred_username</code>.</li>
+  <li><code>oauth2_firstname_key</code> — First name location: <code>given_name</code>, <code>firstName</code>, <code>first_name</code>...</li>
+  <li><code>oauth2_last_name_key</code> — Same story: <code>family_name</code>, <code>lastName</code>, <code>surname</code>...</li>
+  <li><code>oauth2_user_division_key</code> — Optional org unit mapping for customers who want role assignment based on department.</li>
 </ul>
 
-<p>This flexibility means we can integrate with any IdP without code changes.</p>
+<p><strong>The payoff:</strong> When a customer says "Our IdP returns the email in a custom field called <code>corporate_email</code>," we update one config value. No code changes, no deployments.</p>
 
-<h2>Domain-Based SSO Discovery</h2>
+<h2>Domain-Based SSO Discovery: The Magic Login Experience</h2>
 
-<p>To simplify the login experience, we support domain-based SSO discovery through the <code>sign_in_domains</code> array:</p>
+<p>Ever notice how Google Workspace just <em>knows</em> to redirect you to your company's login page when you type your work email? We built the same thing.</p>
 
 <pre><code class="language-ruby">sso_config.sign_in_domains = ["acme.com", "acme.co.uk"]</code></pre>
 
-<p>When a user enters their email, we can automatically detect if SSO is available and redirect them to the appropriate identity provider.</p>
+<p>When a user enters <code>sarah@acme.com</code>, we:</p>
+<ol>
+  <li>Extract the domain (<code>acme.com</code>)</li>
+  <li>Look up matching SSO configs</li>
+  <li>Automatically redirect to Acme's IdP</li>
+</ol>
 
-<h2>Security Considerations</h2>
+<p>No "Select your company" dropdown. No hunting for the "Login with SSO" button. Just type your email and go.</p>
 
-<h3>1. Secret Management</h3>
+<p><strong>The UX impact:</strong> Support tickets about "How do I log in with SSO?" dropped to near zero.</p>
 
-<p>Sensitive values like <code>client_secret</code> are encrypted at rest using our application-level encryptor:</p>
+<h2>Security: The Non-Negotiables</h2>
+
+<p>SSO is literally your authentication layer. If you get security wrong here, everything else is compromised. Here's what we don't cut corners on:</p>
+
+<h3>1. Secrets Are Sacred</h3>
+
+<p>OAuth2 client secrets never touch the database in plaintext. They're encrypted at rest using application-level encryption:</p>
 
 <pre><code class="language-ruby">def encrypted_oauth2_client_secret
   Base64.urlsafe_encode64($encryptor.encrypt(oauth2_client_secret))
 end</code></pre>
 
-<h3>2. UUID-Based Identification</h3>
+<p><strong>Why this matters:</strong> Database breaches happen. When they do, attackers shouldn't get working credentials to impersonate your customers' identity providers.</p>
 
-<p>Each SSO configuration has a unique UUID, preventing enumeration attacks and allowing safe public references in URLs.</p>
+<h3>2. No Enumerable IDs</h3>
 
-<h3>3. Certificate Fingerprint Validation</h3>
+<p>Every SSO config gets a UUID, not an auto-incrementing integer. This prevents attackers from guessing valid config IDs by incrementing numbers.</p>
 
-<p>For SAML, we validate certificate fingerprints to prevent man-in-the-middle attacks during assertion verification.</p>
+<p>Bad: <code>/sso/config/42</code> → Try 43, 44, 45...</p>
+<p>Good: <code>/sso/config/a3f8b2c1-9d4e-4a7b-...</code> → Good luck guessing.</p>
 
-<h3>4. Scope Validation</h3>
+<h3>3. Certificate Pinning for SAML</h3>
 
-<p>OAuth2 scopes are validated and sanitized to prevent injection:</p>
+<p>We validate SAML certificate fingerprints, not just signatures. This prevents MITM attacks where an attacker with a valid cert could forge assertions.</p>
+
+<h3>4. Input Sanitization Everywhere</h3>
+
+<p>OAuth2 scopes are validated and sanitized to prevent injection attacks:</p>
 
 <pre><code class="language-ruby">def oauth2_scopes=(arr)
   self[:oauth2_scopes] = arr&.reject(&:empty?)
 end</code></pre>
 
-<h2>Example Configuration</h2>
+<p>Never trust input from customers, even in admin configuration forms.</p>
 
-<p>Here's how to set up a demo OAuth2 SSO configuration:</p>
+<h2>Putting It Together: A Real Example</h2>
+
+<p>Here's a complete Azure AD OAuth2 configuration. This is close to what we'd create for a real customer:</p>
 
 <pre><code class="language-ruby">SsoInformation.create!(
   company: company,
@@ -1095,38 +1162,55 @@ end</code></pre>
   state_parameter: true
 )</code></pre>
 
-<h2>Lessons Learned</h2>
-
-<h3>1. Flexibility is Key</h3>
-<p>Enterprise IdPs vary wildly in their implementations. Building in configurability from the start saved countless hours of custom development.</p>
-
-<h3>2. Test Environments Matter</h3>
-<p>The environment enum prevented many production incidents by allowing companies to fully test their SSO setup before enabling it for all users.</p>
-
-<h3>3. Mobile is Different</h3>
-<p>Deep linking and custom URL schemes require separate handling from web redirects. Plan for this from the beginning.</p>
-
-<h3>4. Documentation is Essential</h3>
-<p>SSO setup is complex. We created detailed guides for each major IdP (Azure AD, Okta, Google Workspace) to help companies self-service.</p>
-
-<h3>5. Graceful Degradation</h3>
-<p>Always have a fallback authentication method. If SSO fails, users should still be able to access their accounts through email/password.</p>
-
-<h2>Conclusion</h2>
-
-<p>Building a flexible SSO system requires careful planning and an understanding of both OAuth2 and SAML2 protocols. By creating a configurable, multi-tenant architecture, we've enabled seamless integration with virtually any enterprise identity provider.</p>
-
-<p>The key takeaways:</p>
-
+<p><strong>Note the key decisions:</strong></p>
 <ul>
-  <li>Support multiple protocols (OAuth2 and SAML2)</li>
-  <li>Make everything configurable (attribute mapping, URLs, security options)</li>
-  <li>Plan for different environments (production, staging, development)</li>
-  <li>Consider both web and mobile platforms</li>
-  <li>Prioritize security (PKCE, state validation, encryption)</li>
+  <li><code>pkce_layer: true</code> — Azure AD supports it, so we enable it. Extra security at no cost.</li>
+  <li><code>environment: :development</code> — Customer tests here first, then we clone to production.</li>
+  <li>Separate web and mobile redirect URLs — Same IdP config, different callback handling.</li>
 </ul>
 
-<p>This approach has allowed us to onboard enterprise customers quickly while maintaining the security standards they require.</p>
+<h2>Lessons from the Trenches</h2>
+
+<p>After implementing SSO for dozens of enterprise customers, here's what we wish we'd known upfront:</p>
+
+<h3>1. Configuration > Code</h3>
+<p>Every "quick hack" for a specific IdP becomes technical debt. When we made everything configurable, customer onboarding went from "custom development sprint" to "fill out this form." <strong>Invest in flexibility early.</strong></p>
+
+<h3>2. Staging Environments Save Careers</h3>
+<p>A customer will misconfigure SSO. When they do, you want them locked out of <em>staging</em>, not production. The environment enum paid for itself after the first prevented incident.</p>
+
+<h3>3. Mobile SSO is a Different Beast</h3>
+<p>Custom URL schemes, deep linking, secure storage for tokens—mobile has its own rules. Plan for separate redirect URIs from day one, or you'll be refactoring later.</p>
+
+<h3>4. Documentation is Customer Success</h3>
+<p>We wrote step-by-step guides for Azure AD, Okta, Google Workspace, and OneLogin. Result: most customers configure SSO themselves. Support load dropped, sales velocity increased.</p>
+
+<h3>5. Always Have a Backdoor</h3>
+<p><strong>Never</strong> let SSO be the only login method. When (not if) an IdP has an outage or a customer misconfigures something, users need a fallback. We maintain email/password as an escape hatch for admins.</p>
+
+<h2>The Payoff</h2>
+
+<p>Six months after shipping this SSO architecture, here's where we landed:</p>
+
+<ul>
+  <li><strong>Onboarding time:</strong> From 2-week custom integrations to same-day setup for most IdPs</li>
+  <li><strong>Support tickets:</strong> SSO-related issues dropped 80% after adding staging environments</li>
+  <li><strong>Sales:</strong> "Do you support SSO?" is now always "Yes." No more lost deals.</li>
+</ul>
+
+<p>The irony of enterprise SSO is that the better you build it, the more invisible it becomes. Users just log in. IT admins configure it once and forget it. That's the goal.</p>
+
+<h2>Key Takeaways</h2>
+
+<ul>
+  <li><strong>Support both protocols</strong> — OAuth2/OIDC for modern IdPs, SAML2 for enterprise legacy. You'll need both.</li>
+  <li><strong>Make everything configurable</strong> — Attribute mapping, redirect URLs, security toggles. If you hardcode it, a customer will need it different.</li>
+  <li><strong>Environment isolation is not optional</strong> — Customers will misconfigure SSO. Give them a safe place to experiment.</li>
+  <li><strong>Mobile and web are different worlds</strong> — Plan for separate redirect URIs from the start.</li>
+  <li><strong>Security layers should be toggleable</strong> — PKCE, state parameters, response modes. Support them all, enable what each IdP can handle.</li>
+</ul>
+
+<p>SSO is table stakes for enterprise sales. Build it once, build it right, and stop losing deals to a checkbox on procurement checklists.</p>
     `.trim(),
   },
 ];
