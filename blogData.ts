@@ -12,6 +12,238 @@ export interface BlogPost {
 
 export const BLOG_POSTS: BlogPost[] = [
   {
+    slug: 'github-history-trap-deleted-secrets',
+    title: 'The "History" Trap: Why Your Deleted GitHub Secrets Aren\'t Actually Gone',
+    excerpt: 'You pushed an API key by mistake, deleted it in the next commit, and thought you were safe. Wrong. Your secrets live forever in Git history, and attackers know exactly where to look.',
+    date: 'January 2026',
+    readTime: '8 min read',
+    tags: ['Security', 'GitHub', 'Git', 'DevOps', 'Best Practices'],
+    featured: true,
+    resources: [
+      { title: 'GitHub Push Protection', url: 'https://docs.github.com/en/code-security/concepts/secret-security/about-push-protection' },
+      { title: 'git-filter-repo', url: 'https://github.com/newren/git-filter-repo' },
+      { title: 'GitHub Secret Scanning', url: 'https://docs.github.com/en/code-security/secret-scanning' },
+    ],
+    content: `
+<h2>We've All Been There</h2>
+
+<p>You're in a flow, you hardcode an API key for a quick test, and—oops—you push it to GitHub. You realize the mistake, delete the key from your code, and push a second commit. Problem solved, right?</p>
+
+<p><strong>Wrong.</strong></p>
+
+<p>On GitHub, your "mistakes" are preserved in amber. Even if the current version of your code is clean, that sensitive key is just a few clicks away for anyone who knows where to look. In fact, I've recently had to contact several developers on GitHub after spotting their private credentials sitting right there in their commit history.</p>
+
+<p>It's a surprisingly easy mistake to make, but a dangerous one that can lead to <strong>compromised accounts</strong> and <strong>drained budgets</strong>.</p>
+
+<h2>How the "History" Button Becomes a Security Leak</h2>
+
+<p>GitHub is built on Git, a version control system designed <em>never to lose anything</em>. When someone clicks the <strong>"History"</strong> button on one of your files, they aren't just looking at past versions—they're looking at <strong>every state that file has ever existed in</strong>.</p>
+
+<p>An attacker doesn't need to find the key in your current code. They just look for commits with messages like:</p>
+
+<ul>
+  <li><code>"fixed config"</code></li>
+  <li><code>"remove test key"</code></li>
+  <li><code>"oops"</code></li>
+  <li><code>"cleanup credentials"</code></li>
+</ul>
+
+<p>By viewing the <strong>"Diff"</strong> of that commit, the deleted secret appears in <span style="color: #e74c3c; font-weight: bold;">bright red text</span>, plain as day.</p>
+
+<pre><code class="language-diff">- const API_KEY = "sk_fakelive_1234567890";
++ const API_KEY = process.env.STRIPE_API_KEY;</code></pre>
+
+<p>That "deleted" secret? It's still right there. Forever. Unless you take specific action to remove it.</p>
+
+<h2>How to Avoid the "Secret Leak" Forever</h2>
+
+<p>The best way to handle secrets is to make sure they <strong>never enter your Git history in the first place</strong>. Here is the modern workflow for staying safe:</p>
+
+<h3>1. Enable GitHub's Push Protection</h3>
+
+<p>GitHub has a powerful built-in feature that acts as a proactive safety net. <a href="https://docs.github.com/en/code-security/concepts/secret-security/about-push-protection" target="_blank"><strong>Push Protection</strong></a> scans your code for high-confidence secrets <em>before</em> they are even accepted by the repository.</p>
+
+<p><strong>How it works:</strong></p>
+<ul>
+  <li>When you push code, GitHub scans it for patterns matching known secret formats (API keys, tokens, passwords)</li>
+  <li>If it detects a key, it <strong>blocks the push</strong> and prompts you to remove the secret first</li>
+  <li>You get immediate feedback before the damage is done</li>
+</ul>
+
+<p><strong>Why it matters:</strong> It stops the leak before it ever touches the cloud, meaning you don't have to worry about rewriting history later. Prevention is infinitely easier than remediation.</p>
+
+<p>To enable it, go to your repository's <strong>Settings → Code security and analysis → Push protection</strong> and toggle it on.</p>
+
+<h3>2. Master the .gitignore</h3>
+
+<p>Before you write your first line of code, create a <code>.gitignore</code> file. This is your first line of defense—it tells Git to completely ignore sensitive files.</p>
+
+<pre><code class="language-bash"># Environment files
+.env
+.env.local
+.env.*.local
+
+# Secret configuration
+config/secrets.json
+config/credentials.yml
+
+# Private keys
+*.pem
+*.key
+*.p12
+
+# IDE and OS files (bonus cleanup)
+.DS_Store
+.idea/
+.vscode/settings.json</code></pre>
+
+<p><strong>Pro tip:</strong> Use <a href="https://gitignore.io" target="_blank">gitignore.io</a> to generate comprehensive <code>.gitignore</code> files for your stack. Better to ignore too much than too little.</p>
+
+<h3>3. Use Environment Variables</h3>
+
+<p>Never hardcode secrets. Ever. Use a library like <code>dotenv</code> to load your keys from the local environment:</p>
+
+<pre><code class="language-javascript">// Do this:
+const apiKey = process.env.STRIPE_API_KEY;
+
+// NOT this:
+const apiKey = "sk_fake_1234567890";</code></pre>
+
+<p>This pattern works across every language:</p>
+
+<pre><code class="language-python"># Python
+import os
+api_key = os.environ.get('STRIPE_API_KEY')</code></pre>
+
+<pre><code class="language-ruby"># Ruby
+api_key = ENV['STRIPE_API_KEY']</code></pre>
+
+<pre><code class="language-go">// Go
+apiKey := os.Getenv("STRIPE_API_KEY")</code></pre>
+
+<p>Your <code>.env</code> file stays local (and gitignored), while your code stays clean and shareable.</p>
+
+<h2>Too Late? How to Fix It</h2>
+
+<p>If a secret is already in your history, simply deleting it in a new commit is <strong>not enough</strong>. The old commit with the secret still exists. Here's the remediation playbook:</p>
+
+<h3>Step 1: Rotate the Secret Immediately</h3>
+
+<p>This is the <strong>most important step</strong>. Assume the key is compromised and deactivate it at the source:</p>
+
+<ul>
+  <li><strong>AWS:</strong> IAM → Security credentials → Deactivate/Delete access key</li>
+  <li><strong>Stripe:</strong> Developers → API keys → Roll keys</li>
+  <li><strong>Google Cloud:</strong> APIs and Services → Credentials → Delete and recreate</li>
+</ul>
+
+<p>Do this <em>before</em> anything else. An attacker may have already scraped your repo.</p>
+
+<h3>Step 2: Rewrite History</h3>
+
+<p>Use a tool like <a href="https://github.com/newren/git-filter-repo" target="_blank"><strong>git-filter-repo</strong></a> to scrub the secret from every past commit:</p>
+
+<pre><code class="language-bash"># Install git-filter-repo
+pip install git-filter-repo
+
+# Remove a specific file from all history
+git filter-repo --path config/secrets.json --invert-paths
+
+# Or replace a specific string across all history
+git filter-repo --replace-text expressions.txt</code></pre>
+
+<p>Where <code>expressions.txt</code> contains:</p>
+
+<pre><code class="language-text">sk_live==>***REMOVED***</code></pre>
+
+<h3>Step 3: Force Push</h3>
+
+<p>After rewriting history locally, you need to force-push the cleaned history to GitHub to overwrite the old, "leaky" version:</p>
+
+<pre><code class="language-bash">git push origin --force --all
+git push origin --force --tags</code></pre>
+
+<p><strong>Warning:</strong> Force pushing rewrites history for everyone. If you're working on a team, coordinate first—they'll need to re-clone or carefully rebase their local copies.</p>
+
+<h3>Step 4: Clear GitHub's Caches</h3>
+
+<p>Even after force pushing, GitHub may cache old commits. Contact <a href="https://support.github.com" target="_blank">GitHub Support</a> to request a garbage collection on your repository if the secret was particularly sensitive.</p>
+
+<h2>The Quick Checklist</h2>
+
+<p>Here's your security checklist to prevent and handle leaked secrets:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Prevention</th>
+      <th>Remediation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Enable Push Protection</td>
+      <td>Rotate the secret immediately</td>
+    </tr>
+    <tr>
+      <td>Use .gitignore for sensitive files</td>
+      <td>Rewrite history with git-filter-repo</td>
+    </tr>
+    <tr>
+      <td>Use environment variables</td>
+      <td>Force push cleaned history</td>
+    </tr>
+    <tr>
+      <td>Use secret managers in production</td>
+      <td>Contact GitHub Support if needed</td>
+    </tr>
+    <tr>
+      <td>Review commits before pushing</td>
+      <td>Notify your team</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Tools That Have Your Back</h2>
+
+<p>Beyond GitHub's built-in features, consider these additional layers of protection:</p>
+
+<ul>
+  <li><strong><a href="https://github.com/trufflesecurity/trufflehog" target="_blank">TruffleHog</a></strong> — Scans your entire Git history for secrets. Great for auditing existing repos.</li>
+  <li><strong><a href="https://github.com/gitleaks/gitleaks" target="_blank">Gitleaks</a></strong> — Fast secret scanner that integrates with CI/CD pipelines.</li>
+  <li><strong><a href="https://pre-commit.com/" target="_blank">pre-commit hooks</a></strong> — Block commits containing secrets before they even reach your local history.</li>
+</ul>
+
+<p>Example pre-commit configuration:</p>
+
+<pre><code class="language-yaml"># .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.0
+    hooks:
+      - id: gitleaks</code></pre>
+
+<h2>The Bottom Line</h2>
+
+<p>Git never forgets. What feels like a quick delete is really just hiding your secret in plain sight. Every commit, every diff, every branch—they're all permanent records that anyone can browse.</p>
+
+<p>The solution isn't paranoia—it's process:</p>
+
+<ol>
+  <li><strong>Enable <a href="https://docs.github.com/en/code-security/concepts/secret-security/about-push-protection" target="_blank">Push Protection</a></strong> — Let GitHub catch mistakes before they become incidents</li>
+  <li><strong>Configure .gitignore properly</strong> — Keep sensitive files out of version control entirely</li>
+  <li><strong>Use environment variables</strong> — Separate secrets from code by design</li>
+  <li><strong>Audit existing repos</strong> — You might be surprised what's lurking in your history</li>
+</ol>
+
+<p>Don't let your commit history become a roadmap for hackers. Check your history, turn on push protection, and keep your secrets where they belong: <strong>out of your code</strong>.</p>
+
+<hr />
+
+<p><em>Have you found secrets in someone's public repo? Or had to clean up a leak yourself? The experience is more common than people admit—and sharing these stories helps the community learn.</em></p>
+    `.trim(),
+  },
+  {
     slug: 'building-ai-copilot-accounts-receivable',
     title: 'Building an AI Copilot for Accounts Receivable: A Technical Deep Dive',
     excerpt: 'How we built an AI copilot at Delfyn that transforms how finance teams manage accounts receivable, using Python, FastAPI, LangChain, Gemini 3, and assistant-ui for the React frontend.',
