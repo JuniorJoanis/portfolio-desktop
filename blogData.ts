@@ -21,8 +21,9 @@ export const BLOG_POSTS: BlogPost[] = [
     featured: true,
     resources: [
       { title: 'GitHub Push Protection', url: 'https://docs.github.com/en/code-security/concepts/secret-security/about-push-protection' },
+      { title: 'AWS Secrets Manager', url: 'https://aws.amazon.com/secrets-manager/' },
+      { title: 'Google Cloud Secret Manager', url: 'https://cloud.google.com/secret-manager' },
       { title: 'git-filter-repo', url: 'https://github.com/newren/git-filter-repo' },
-      { title: 'GitHub Secret Scanning', url: 'https://docs.github.com/en/code-security/secret-scanning' },
     ],
     content: `
 <h2>We've All Been There</h2>
@@ -122,6 +123,124 @@ api_key = ENV['STRIPE_API_KEY']</code></pre>
 apiKey := os.Getenv("STRIPE_API_KEY")</code></pre>
 
 <p>Your <code>.env</code> file stays local (and gitignored), while your code stays clean and shareable.</p>
+
+<h2>Leveling Up: Use a Managed Secret Manager</h2>
+
+<p>Environment variables are a solid foundation, but they still have a weakness: <strong>the secret exists as a file on your machine or server</strong>. Someone with access to that machine can read it. For production-level applications, the gold standard is to use a <strong>managed secret manager</strong> from your cloud provider.</p>
+
+<p>The key insight: instead of storing secrets in files, your application <em>asks</em> for the secret at runtime. The secret never touches disk, never appears in logs, and can be rotated without redeploying your app.</p>
+
+<h3>AWS Secrets Manager</h3>
+
+<p><a href="https://aws.amazon.com/secrets-manager/" target="_blank">AWS Secrets Manager</a> stores your secrets encrypted and provides fine-grained access control via IAM policies. Your application retrieves secrets programmatically:</p>
+
+<pre><code class="language-python"># Python with boto3
+import boto3
+import json
+
+def get_secret(secret_name: str) -> dict:
+    client = boto3.client('secretsmanager', region_name='us-east-1')
+    response = client.get_secret_value(SecretId=secret_name)
+    return json.loads(response['SecretString'])
+
+# Usage
+secrets = get_secret('prod/my-app/api-keys')
+stripe_key = secrets['STRIPE_API_KEY']</code></pre>
+
+<pre><code class="language-javascript">// Node.js with AWS SDK v3
+import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager";
+
+async function getSecret(secretName) {
+  const client = new SecretsManagerClient({ region: "us-east-1" });
+  const response = await client.send(
+    new GetSecretValueCommand({ SecretId: secretName })
+  );
+  return JSON.parse(response.SecretString);
+}
+
+// Usage
+const secrets = await getSecret('prod/my-app/api-keys');
+const stripeKey = secrets.STRIPE_API_KEY;</code></pre>
+
+<h3>Google Cloud Secret Manager</h3>
+
+<p><a href="https://cloud.google.com/secret-manager" target="_blank">Google Cloud Secret Manager</a> offers similar functionality with tight integration into GCP's IAM system:</p>
+
+<pre><code class="language-python"># Python with google-cloud-secret-manager
+from google.cloud import secretmanager
+
+def get_secret(project_id: str, secret_id: str, version: str = "latest") -> str:
+    client = secretmanager.SecretManagerServiceClient()
+    name = f"projects/{project_id}/secrets/{secret_id}/versions/{version}"
+    response = client.access_secret_version(request={"name": name})
+    return response.payload.data.decode("UTF-8")
+
+# Usage
+stripe_key = get_secret('my-gcp-project', 'stripe-api-key')</code></pre>
+
+<pre><code class="language-javascript">// Node.js with @google-cloud/secret-manager
+import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
+
+async function getSecret(projectId, secretId, version = 'latest') {
+  const client = new SecretManagerServiceClient();
+  const name = \`projects/\${projectId}/secrets/\${secretId}/versions/\${version}\`;
+  const [response] = await client.accessSecretVersion({ name });
+  return response.payload.data.toString();
+}
+
+// Usage
+const stripeKey = await getSecret('my-gcp-project', 'stripe-api-key');</code></pre>
+
+<h3>Why Managed Secrets Beat Environment Variables</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Feature</th>
+      <th>Environment Variables</th>
+      <th>Managed Secret Manager</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Secret stored on disk</td>
+      <td>Yes (.env file)</td>
+      <td>No (fetched at runtime)</td>
+    </tr>
+    <tr>
+      <td>Automatic rotation</td>
+      <td>Manual process</td>
+      <td>Built-in support</td>
+    </tr>
+    <tr>
+      <td>Audit trail</td>
+      <td>None</td>
+      <td>Full access logs</td>
+    </tr>
+    <tr>
+      <td>Access control</td>
+      <td>File permissions</td>
+      <td>IAM policies</td>
+    </tr>
+    <tr>
+      <td>Works locally</td>
+      <td>Simple</td>
+      <td>Requires cloud auth</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>Pro tip:</strong> Use environment variables for local development and managed secrets for staging/production. Most SDKs support falling back gracefully:</p>
+
+<pre><code class="language-python"># Hybrid approach: local dev uses .env, production uses Secrets Manager
+import os
+
+def get_api_key():
+    # Check environment first (local dev)
+    if api_key := os.environ.get('STRIPE_API_KEY'):
+        return api_key
+    # Fall back to Secrets Manager (production)
+    return get_secret('prod/stripe')['api_key']</code></pre>
 
 <h2>Too Late? How to Fix It</h2>
 
