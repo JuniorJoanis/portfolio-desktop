@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { AppId, WindowState } from '../../types';
-import { Battery, Wifi } from 'lucide-react';
+import { Battery, Wifi, BookOpen } from 'lucide-react';
 
 interface TaskbarProps {
   windows: WindowState[];
@@ -9,12 +10,16 @@ interface TaskbarProps {
 }
 
 const Taskbar: React.FC<TaskbarProps> = ({ windows, activeWindowId, onToggleWindow }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
+
+  const isBlogActive = location.pathname.startsWith('/blog');
 
   return (
     <div className="h-12 md:h-12 bg-[#1e293b]/80 backdrop-blur-md border-t border-white/10 fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between px-2 md:px-4">
@@ -55,6 +60,22 @@ const Taskbar: React.FC<TaskbarProps> = ({ windows, activeWindowId, onToggleWind
                 </button>
             )
         })}
+        
+        {/* Blog Button - Always visible for quick access */}
+        <button
+          onClick={() => navigate('/blog')}
+          className={`
+            group relative h-9 w-9 md:h-10 md:w-10 flex items-center justify-center rounded-lg transition-all flex-shrink-0 touch-manipulation
+            ${isBlogActive ? 'bg-white/10' : 'hover:bg-white/5 active:bg-white/10'}
+          `}
+          title="Blog"
+        >
+          <BookOpen size={18} className={`md:w-5 md:h-5 ${isBlogActive ? 'text-blue-400' : 'text-slate-300'}`} />
+          {/* Active Indicator */}
+          {isBlogActive && (
+            <span className="absolute bottom-0.5 w-1 h-1 rounded-full bg-blue-400" />
+          )}
+        </button>
       </div>
 
       {/* System Tray */}
