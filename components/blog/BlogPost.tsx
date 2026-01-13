@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
 import { Calendar, Clock, Tag, ArrowLeft, Share2, Bookmark, ExternalLink } from 'lucide-react';
 import BlogLayout from './BlogLayout';
@@ -14,9 +14,27 @@ import {
   SITE_URL,
 } from '../../utils/seo';
 
+// Declare Prism for TypeScript
+declare global {
+  interface Window {
+    Prism: {
+      highlightAll: () => void;
+      highlightAllUnder: (container: Element) => void;
+    };
+  }
+}
+
 const BlogPost: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const post = BLOG_POSTS.find(p => p.slug === slug);
+  const contentRef = useRef<HTMLDivElement>(null);
+  
+  // Trigger Prism.js syntax highlighting after content renders
+  useEffect(() => {
+    if (contentRef.current && window.Prism) {
+      window.Prism.highlightAllUnder(contentRef.current);
+    }
+  }, [post]);
   
   // SEO: Update meta tags and structured data
   useEffect(() => {
@@ -238,6 +256,7 @@ const BlogPost: React.FC = () => {
         {/* Article Content - with proper semantic wrapper */}
         <div className="max-w-3xl mx-auto px-6 py-12">
           <div 
+            ref={contentRef}
             className="prose prose-invert prose-lg max-w-none
               prose-headings:font-bold prose-headings:text-slate-100 prose-headings:tracking-tight
               prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-6 prose-h2:pb-3 prose-h2:border-b prose-h2:border-slate-700/50

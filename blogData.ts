@@ -1271,7 +1271,7 @@ export const ARCopilotChat = () => {
     date: 'January 2026',
     readTime: '15 min read',
     tags: ['Ruby on Rails', 'OAuth2', 'SAML2', 'Authentication', 'Enterprise', 'Security'],
-    featured: true,
+    featured: false,
     resources: [
       { title: 'OAuth 2.0 RFC 6749', url: 'https://tools.ietf.org/html/rfc6749' },
       { title: 'PKCE RFC 7636', url: 'https://tools.ietf.org/html/rfc7636' },
@@ -1566,12 +1566,12 @@ end</code></pre>
   },
   {
     slug: 'building-ensemble-forecasting-models-ruby-rails',
-    title: 'Building Ensemble Forecasting Models in Ruby on Rails',
+    title: 'Building a Financial Safety Net: Implementing Finance Forecasting in Ruby on Rails',
     excerpt: 'How we built a financial forecasting system that combines 5 statistical models for accurate cash flow predictions, using weighted linear regression, exponential smoothing, moving averages, seasonal decomposition, and ARIMA.',
     date: 'January 2026',
     readTime: '18 min read',
     tags: ['Ruby', 'Rails', 'Forecasting', 'Time Series', 'Statistics', 'FinTech'],
-    featured: true,
+    featured: false,
     resources: [
       { title: 'Holt-Winters Exponential Smoothing', url: 'https://otexts.com/fpp2/holt-winters.html' },
       { title: 'ARIMA Models', url: 'https://otexts.com/fpp2/arima.html' },
