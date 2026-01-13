@@ -1564,5 +1564,618 @@ end</code></pre>
 <p>SSO is table stakes for enterprise sales. Build it once, build it right, and stop losing deals to a checkbox on procurement checklists.</p>
     `.trim(),
   },
+  {
+    slug: 'building-ensemble-forecasting-models-ruby-rails',
+    title: 'Building Ensemble Forecasting Models in Ruby on Rails',
+    excerpt: 'How we built a financial forecasting system that combines 5 statistical models for accurate cash flow predictions, using weighted linear regression, exponential smoothing, moving averages, seasonal decomposition, and ARIMA.',
+    date: 'January 2026',
+    readTime: '18 min read',
+    tags: ['Ruby', 'Rails', 'Forecasting', 'Time Series', 'Statistics', 'FinTech'],
+    featured: true,
+    resources: [
+      { title: 'Holt-Winters Exponential Smoothing', url: 'https://otexts.com/fpp2/holt-winters.html' },
+      { title: 'ARIMA Models', url: 'https://otexts.com/fpp2/arima.html' },
+      { title: 'Time Series Decomposition', url: 'https://otexts.com/fpp2/decomposition.html' },
+    ],
+    content: `
+<h2>Introduction</h2>
+
+<p>Predicting future revenue and expenses is critical for any B2B business. But single-model forecasting approaches often fail when faced with real-world data irregularities—seasonal spikes, outliers, and missing data points.</p>
+
+<p>In this post, I'll walk you through how we built an <strong>ensemble forecasting system</strong> in Ruby on Rails that combines five different statistical models to generate more accurate and reliable predictions. This system powers our cash flow forecasting feature, helping businesses anticipate their financial future.</p>
+
+<h2>The Problem with Single-Model Forecasting</h2>
+
+<p>Most tutorials show you how to implement a simple moving average or linear regression. But in production, you'll quickly discover:</p>
+
+<ul>
+  <li><strong>Linear trends miss seasonality</strong> — Q4 revenue spikes won't be captured</li>
+  <li><strong>Moving averages lag behind</strong> — They react slowly to trend changes</li>
+  <li><strong>Seasonal models fail with short data</strong> — You need 12+ months of history</li>
+  <li><strong>All models struggle with outliers</strong> — One bad month skews everything</li>
+</ul>
+
+<p>Our solution? <strong>Combine them all</strong> and let each model vote on the forecast, weighted by its confidence.</p>
+
+<h2>Architecture Overview</h2>
+
+<pre><code class="language-ruby">class FinanceReporting::ForecastService
+  def initialize(merchant:, start_date: 1.year.ago, end_date: Date.today, forecast_periods: 6)
+    @merchant = merchant
+    @start_date = start_date.in_time_zone("Amsterdam")
+    @end_date = end_date.in_time_zone("Amsterdam")
+    @forecast_periods = forecast_periods
+  end
+
+  def call
+    {
+      cash_flow: generate_cash_flow_forecast,
+      revenue: generate_revenue_forecast,
+      expenses: generate_expense_forecast,
+      pnl: generate_pnl_forecast,
+      confidence_metrics: calculate_overall_confidence,
+      generated_at: Time.current
+    }
+  end
+end</code></pre>
+
+<p>The service generates four interconnected forecasts, each powered by the same ensemble engine.</p>
+
+<h2>Step 1: Data Preparation</h2>
+
+<p>Before any forecasting, we need clean, consistent time series data.</p>
+
+<h3>Converting Raw Data to Time Series</h3>
+
+<pre><code class="language-ruby">def prepare_time_series(data)
+  return [] if data.empty?
+  
+  # Convert to consistent format: [[date, value], ...]
+  series = if data.is_a?(Hash)
+             data.sort_by { |date, _| date }
+                 .map { |date, value| [date, value.to_f] }
+           elsif data.is_a?(Array) && data.first.is_a?(Array)
+             data.sort_by { |item| item[0] }
+                 .map { |item| [item[0], item[1].to_f] }
+           else
+             []
+           end
+  
+  # Fill missing periods with interpolated values
+  fill_missing_periods(series)
+end</code></pre>
+
+<h3>Filling Missing Months</h3>
+
+<p>Real-world data has gaps. A customer might have invoices in January and March, but nothing in February. We use linear interpolation to fill these gaps:</p>
+
+<pre><code class="language-ruby">def fill_missing_periods(series)
+  return series if series.empty? || series.size < 2
+  
+  filled_series = []
+  sorted_series = series.sort_by { |item| item[0] }
+  
+  (0...sorted_series.size - 1).each do |i|
+    current_date, current_value = sorted_series[i]
+    next_date, next_value = sorted_series[i + 1]
+    
+    filled_series << [current_date, current_value]
+    
+    # Check if there's a gap
+    months_between = ((next_date - current_date) / 1.month).to_i
+    
+    if months_between > 1
+      # Linear interpolation for missing months
+      (1...months_between).each do |month_offset|
+        interpolated_date = current_date + month_offset.months
+        weight = month_offset.to_f / months_between
+        interpolated_value = current_value + weight * (next_value - current_value)
+        filled_series << [interpolated_date, interpolated_value]
+      end
+    end
+  end
+  
+  filled_series << sorted_series.last
+  filled_series
+end</code></pre>
+
+<h3>Outlier Detection with IQR Method</h3>
+
+<p>One unusually large invoice shouldn't destroy your forecast. We use the <strong>Interquartile Range (IQR)</strong> method to detect and replace outliers:</p>
+
+<pre><code class="language-ruby">def remove_outliers(series)
+  return series if series.empty? || series.size < 4
+  
+  values = series.map { |_, value| value }
+  q1, q3 = calculate_quartiles(values)
+  iqr = q3 - q1
+  
+  lower_bound = q1 - 1.5 * iqr
+  upper_bound = q3 + 1.5 * iqr
+  
+  # Replace outliers with interpolated values from neighbors
+  series.map.with_index do |(date, value), index|
+    if value < lower_bound || value > upper_bound
+      interpolated_value = interpolate_outlier(series, index)
+      [date, interpolated_value]
+    else
+      [date, value]
+    end
+  end
+end
+
+def interpolate_outlier(series, index)
+  # Use median of 2 points before and after
+  values = []
+  (-2..2).each do |offset|
+    next if offset == 0
+    check_index = index + offset
+    if check_index >= 0 && check_index < series.size
+      values << series[check_index][1]
+    end
+  end
+  
+  values.sort[values.size / 2]  # Return median
+end</code></pre>
+
+<h2>Step 2: The Five Forecasting Models</h2>
+
+<p>Here's where the magic happens. We implement five distinct models, each with different strengths:</p>
+
+<h3>Model 1: Weighted Linear Regression (25% weight)</h3>
+
+<p>Standard linear regression treats all data points equally. But in business forecasting, <strong>recent data matters more</strong>. We apply linear weights that favor recent observations:</p>
+
+<pre><code class="language-ruby">def forecast_linear_trend_enhanced(series, period)
+  return 0 if series.empty? || series.size < 2
+  
+  n = series.size
+  # Linear weights: [0.1, 0.2, 0.3, ... 1.0] favoring recent data
+  weights = (1..n).map { |i| i.to_f / n }
+  
+  values = series.map { |_, value| value }
+  x_values = (1..n).to_a
+  
+  # Weighted means
+  weighted_sum = weights.sum
+  weighted_x_mean = x_values.zip(weights).sum { |x, w| x * w } / weighted_sum
+  weighted_y_mean = values.zip(weights).sum { |y, w| y * w } / weighted_sum
+  
+  # Weighted slope calculation
+  numerator = x_values.zip(values, weights)
+                      .sum { |x, y, w| w * (x - weighted_x_mean) * (y - weighted_y_mean) }
+  denominator = x_values.zip(weights)
+                        .sum { |x, w| w * (x - weighted_x_mean) ** 2 }
+  
+  return 0 if denominator == 0
+  
+  slope = numerator / denominator
+  intercept = weighted_y_mean - slope * weighted_x_mean
+  
+  # Forecast for target period
+  target_x = n + period
+  slope * target_x + intercept
+end</code></pre>
+
+<h3>Model 2: Double Exponential Smoothing (20% weight)</h3>
+
+<p>Exponential smoothing captures both <strong>level</strong> (where we are) and <strong>trend</strong> (where we're going):</p>
+
+<pre><code class="language-ruby">def forecast_exponential_smoothing(series, period, alpha: 0.3, beta: 0.1)
+  return 0 if series.empty?
+  
+  values = series.map { |_, value| value }
+  return values.last if values.size < 2
+  
+  # Initialize level and trend
+  level = values.first
+  trend = values[1] - values[0]
+  
+  # Holt's double exponential smoothing
+  values.each_with_index do |value, i|
+    next if i == 0
+    
+    prev_level = level
+    level = alpha * value + (1 - alpha) * (level + trend)
+    trend = beta * (level - prev_level) + (1 - beta) * trend
+  end
+  
+  # Forecast h periods ahead
+  level + period * trend
+end</code></pre>
+
+<p><strong>Why alpha = 0.3?</strong> Lower values (0.1-0.3) give more weight to historical data, making the model stable. Higher values (0.7-0.9) react quickly to changes but can be noisy.</p>
+
+<h3>Model 3: Multi-Window Moving Average (15% weight)</h3>
+
+<p>Instead of a single window, we combine multiple windows and weight them:</p>
+
+<pre><code class="language-ruby">def forecast_moving_average(series, period)
+  return 0 if series.empty?
+  
+  values = series.map { |_, value| value }
+  
+  # Use 3, 6, and 12-month windows
+  windows = [3, 6, 12].select { |w| w <= values.size }
+  return values.last if windows.empty?
+  
+  weighted_forecast = 0
+  total_weight = 0
+  
+  windows.each do |window|
+    window_values = values.last(window)
+    window_average = window_values.sum / window_values.size
+    
+    # Weight by window size (larger windows = more stable)
+    weight = window.to_f / windows.sum
+    weighted_forecast += window_average * weight
+    total_weight += weight
+  end
+  
+  total_weight > 0 ? weighted_forecast / total_weight : values.last
+end</code></pre>
+
+<h3>Model 4: Seasonal Decomposition (20% weight)</h3>
+
+<p>Decompose the series into trend + seasonal + residual, then forecast each:</p>
+
+<pre><code class="language-ruby">def forecast_seasonal_decomposition(series, period)
+  return 0 if series.empty? || series.size < 12
+  
+  decomposition = decompose_time_series(series)
+  
+  trend_forecast = forecast_trend_component(decomposition[:trend], period)
+  seasonal_forecast = forecast_seasonal_component(decomposition[:seasonal], period)
+  
+  trend_forecast + seasonal_forecast
+end
+
+def decompose_time_series(series)
+  values = series.map { |_, value| value }
+  
+  # Calculate trend using 12-month centered moving average
+  trend = calculate_trend_component_series(values)
+  
+  # Seasonal = Original - Trend (then average by month)
+  seasonal = calculate_seasonal_component_series(values, trend)
+  
+  # Residual = Original - Trend - Seasonal
+  residual = values.zip(trend, seasonal).map { |v, t, s| v - t - s }
+  
+  { trend: trend, seasonal: seasonal, residual: residual }
+end</code></pre>
+
+<h3>Model 5: Simplified ARIMA (20% weight)</h3>
+
+<p>ARIMA (AutoRegressive Integrated Moving Average) is powerful but complex. We implement a simplified version using differencing:</p>
+
+<pre><code class="language-ruby">def forecast_arima_like(series, period)
+  return 0 if series.empty? || series.size < 3
+  
+  values = series.map { |_, value| value }
+  
+  # First difference: removes linear trend
+  diff1 = values.each_cons(2).map { |a, b| b - a }
+  return forecast_moving_average(series, period) if diff1.empty?
+  
+  # Second difference: removes quadratic trend
+  diff2 = diff1.each_cons(2).map { |a, b| b - a }
+  
+  # Use whichever series is more stable (closer to zero mean)
+  working_series = diff2.size > 3 && diff2.sum.abs < diff1.sum.abs ? diff2 : diff1
+  
+  # Forecast the difference
+  forecasted_diff = working_series.last(3).sum / 3.0
+  
+  # Convert back to original scale
+  last_value = values.last
+  last_diff = diff1.last
+  
+  if working_series == diff2
+    last_value + (last_diff + forecasted_diff) * period
+  else
+    last_value + forecasted_diff * period
+  end
+end</code></pre>
+
+<h2>Step 3: The Ensemble Engine</h2>
+
+<p>Now we combine all five models using <strong>confidence-weighted voting</strong>:</p>
+
+<pre><code class="language-ruby">def forecast_with_ensemble(series, period, type)
+  return { forecast: 0, confidence: 0.1, models: {} } if series.empty?
+  
+  models = {}
+  
+  # Each model contributes its forecast, weight, and confidence
+  models[:linear_trend] = {
+    forecast: forecast_linear_trend_enhanced(series, period),
+    weight: 0.25,
+    confidence: calculate_linear_trend_confidence(series, period)
+  }
+  
+  models[:exponential_smoothing] = {
+    forecast: forecast_exponential_smoothing(series, period),
+    weight: 0.20,
+    confidence: calculate_exponential_smoothing_confidence(series, period)
+  }
+  
+  models[:moving_average] = {
+    forecast: forecast_moving_average(series, period),
+    weight: 0.15,
+    confidence: calculate_moving_average_confidence(series, period)
+  }
+  
+  models[:seasonal_decomposition] = {
+    forecast: forecast_seasonal_decomposition(series, period),
+    weight: 0.20,
+    confidence: calculate_seasonal_confidence(series, period)
+  }
+  
+  models[:arima_like] = {
+    forecast: forecast_arima_like(series, period),
+    weight: 0.20,
+    confidence: calculate_arima_confidence(series, period)
+  }
+  
+  # Weighted ensemble: forecast * weight * confidence
+  total_weight = models.values.sum { |m| m[:weight] * m[:confidence] }
+  
+  if total_weight > 0
+    ensemble_forecast = models.values.sum { |m| 
+      m[:forecast] * m[:weight] * m[:confidence] 
+    } / total_weight
+    
+    ensemble_confidence = models.values.sum { |m| 
+      m[:confidence] * m[:weight] 
+    } / models.values.sum { |m| m[:weight] }
+  else
+    ensemble_forecast = 0
+    ensemble_confidence = 0.1
+  end
+  
+  {
+    forecast: ensemble_forecast,
+    confidence: ensemble_confidence,
+    models: models  # Expose individual model predictions for debugging
+  }
+end</code></pre>
+
+<h3>Why This Works</h3>
+
+<p>The formula <code>forecast * weight * confidence</code> means:</p>
+<ul>
+  <li>Models with <strong>higher base weights</strong> contribute more (linear regression at 25%)</li>
+  <li>Models with <strong>higher confidence</strong> for this specific data contribute more</li>
+  <li>A model that's uncertain about its prediction naturally gets down-weighted</li>
+</ul>
+
+<h2>Step 4: Confidence Calculation</h2>
+
+<p>Each model calculates its own confidence based on how well it fits the historical data:</p>
+
+<pre><code class="language-ruby">def calculate_linear_trend_confidence(series, period)
+  return 0.1 if series.empty? || series.size < 3
+  
+  values = series.map { |_, value| value }
+  n = values.size
+  
+  # Calculate R-squared (coefficient of determination)
+  x_values = (1..n).to_a
+  x_mean = x_values.sum.to_f / n
+  y_mean = values.sum.to_f / n
+  
+  # Fit line and calculate residuals
+  numerator = x_values.zip(values).sum { |x, y| (x - x_mean) * (y - y_mean) }
+  denominator = x_values.sum { |x| (x - x_mean) ** 2 }
+  
+  return 0.1 if denominator == 0
+  
+  slope = numerator / denominator
+  intercept = y_mean - slope * x_mean
+  
+  # R-squared calculation
+  ss_res = 0
+  ss_tot = 0
+  
+  x_values.zip(values).each do |x, y|
+    predicted = slope * x + intercept
+    ss_res += (y - predicted) ** 2
+    ss_tot += (y - y_mean) ** 2
+  end
+  
+  r_squared = ss_tot > 0 ? 1 - (ss_res / ss_tot) : 0
+  
+  # Adjust for forecast horizon (farther = less confident)
+  base_confidence = [r_squared, 0.1].max
+  period_penalty = (period - 1) * 0.05
+  data_quality_bonus = series.size > 12 ? 0.1 : 0
+  
+  [[base_confidence - period_penalty + data_quality_bonus, 0.1].max, 0.95].min
+end</code></pre>
+
+<h2>Step 5: Monte Carlo Simulation for Risk Assessment</h2>
+
+<p>For P&L forecasting, we add Monte Carlo simulation to quantify uncertainty:</p>
+
+<pre><code class="language-ruby">def run_monte_carlo_simulation(revenue_period, expense_total, period, simulations: 1000)
+  return {} unless revenue_period
+  
+  results = []
+  
+  # Uncertainty increases with forecast horizon
+  revenue_mean = revenue_period[:forecasted_amount]
+  revenue_std = revenue_mean * 0.15 * period
+  
+  expense_mean = expense_total
+  expense_std = expense_total * 0.1 * period
+  
+  simulations.times do
+    # Sample from distributions
+    revenue_sim = revenue_mean + (rand - 0.5) * 2 * revenue_std
+    expense_sim = expense_mean + (rand - 0.5) * 2 * expense_std
+    
+    revenue_sim = [revenue_sim, 0].max
+    expense_sim = [expense_sim, 0].max
+    
+    net_income = revenue_sim - expense_sim
+    results << { net_income: net_income }
+  end
+  
+  net_incomes = results.map { |r| r[:net_income] }
+  
+  {
+    mean_net_income: (net_incomes.sum / simulations).round(2),
+    percentile_5: net_incomes.sort[(simulations * 0.05).to_i].round(2),
+    percentile_95: net_incomes.sort[(simulations * 0.95).to_i].round(2),
+    probability_positive: (results.count { |r| r[:net_income] > 0 } / simulations.to_f).round(3)
+  }
+end</code></pre>
+
+<p>This gives us:</p>
+<ul>
+  <li><strong>90% confidence interval</strong> (5th to 95th percentile)</li>
+  <li><strong>Probability of profitability</strong> (% of simulations with positive net income)</li>
+  <li><strong>Value at Risk</strong> (worst-case 5th percentile)</li>
+</ul>
+
+<h2>Step 6: Applying Constraints</h2>
+
+<p>Raw forecasts can produce impossible values. We apply sanity checks:</p>
+
+<pre><code class="language-ruby">def apply_forecast_constraints(forecast, series, period)
+  return 0 if series.empty?
+  
+  values = series.map { |_, value| value }
+  
+  # Calculate reasonable bounds from history
+  mean = values.sum / values.size
+  std_dev = Math.sqrt(values.sum { |v| (v - mean) ** 2 } / values.size)
+  
+  # Allow 3 standard deviations from mean
+  lower_bound = [mean - 3 * std_dev, 0].max  # Revenue can't be negative
+  upper_bound = mean + 3 * std_dev
+  
+  # Apply bounds
+  constrained = [[forecast, lower_bound].max, upper_bound].min
+  
+  # Limit change rate (max 50% change per period)
+  recent_average = values.last(3).sum / [values.last(3).size, 1].max
+  max_change = recent_average * 0.5 * period
+  
+  if (constrained - recent_average).abs > max_change
+    constrained = constrained > recent_average ? 
+      recent_average + max_change : 
+      recent_average - max_change
+  end
+  
+  constrained
+end</code></pre>
+
+<h2>The Final Output</h2>
+
+<p>When you call <code>ForecastService.new(merchant: merchant).call</code>, you get:</p>
+
+<pre><code class="language-ruby">{
+  cash_flow: {
+    periods: [
+      {
+        period: "2026-02",
+        expected_inflow: 125000.00,
+        expected_outflow: 98000.00,
+        net_cash_flow: 27000.00,
+        confidence: 0.78,
+        risk_level: "low",
+        prediction_intervals: {
+          revenue_lower: 112500.00,
+          revenue_upper: 137500.00
+        },
+        model_components: {
+          revenue: {
+            forecast: 125000.00,
+            confidence: 0.82,
+            models: {
+              linear_trend: { forecast: 128000, confidence: 0.85 },
+              exponential_smoothing: { forecast: 122000, confidence: 0.79 },
+              # ... other models
+            }
+          }
+        }
+      }
+      # ... more periods
+    ],
+    summary: {
+      total_expected_inflow: 750000.00,
+      net_monthly_average: 27000.00,
+      forecast_accuracy: { revenue_accuracy: 0.75 }
+    },
+    confidence_metrics: {
+      forecast_reliability: 0.76,
+      seasonal_factor_strength: 0.45,
+      trend_strength: 0.62
+    }
+  },
+  revenue: { /* detailed revenue forecast */ },
+  expenses: { /* by category */ },
+  pnl: { /* with Monte Carlo results */ }
+}</code></pre>
+
+<h2>Technical Limitations & Future Evolutions</h2>
+
+<p>While this "Pure Ruby" ensemble approach allowed us to ship a sophisticated feature without adding infrastructure complexity, it's important to acknowledge its trade-offs:</p>
+
+<h3>1. The "Math in Ruby" Bottleneck</h3>
+
+<p>Ruby is excellent for business logic but isn't optimized for heavy numerical computation.</p>
+
+<p><strong>The Limitation:</strong> As datasets grow, the ~2200 lines of manual statistical loops can become a performance bottleneck during background processing.</p>
+
+<p><strong>The Evolution:</strong> For massive scale, we may move the "math" layer to C-optimized libraries like Numo::NArray or offload the computation to a Python-based microservice leveraging pandas and scikit-learn.</p>
+
+<h3>2. Statistical Simplicity vs. Deep Learning</h3>
+
+<p>Our models are robust but lack the depth of modern "AI" forecasting frameworks.</p>
+
+<p><strong>The Limitation:</strong> The system may struggle with complex, non-linear patterns or overlapping cycles that tools like Facebook Prophet handle automatically.</p>
+
+<p><strong>The Evolution:</strong> We view this engine as a "baseline." Our next phase involves Backtesting: running historical data through this engine versus ML models to see where the extra complexity actually improves accuracy.</p>
+
+<h2>Key Takeaways</h2>
+
+<ol>
+  <li><strong>No single model is best</strong> — Ensemble approaches consistently outperform individual models in production</li>
+  <li><strong>Weight by confidence</strong> — Let models that fit your data better have more influence</li>
+  <li><strong>Clean your data first</strong> — Outlier removal and gap filling are crucial</li>
+  <li><strong>Quantify uncertainty</strong> — Monte Carlo simulation gives you probability distributions, not just point estimates</li>
+  <li><strong>Apply constraints</strong> — Business logic should prevent impossible forecasts</li>
+  <li><strong>Expose the internals</strong> — Returning individual model predictions helps with debugging and trust</li>
+</ol>
+
+<h2>Performance Considerations</h2>
+
+<p>This service processes ~2200 lines of Ruby for a single forecast. For production:</p>
+
+<ul>
+  <li><strong>Cache results</strong> — Forecasts don't change minute-to-minute</li>
+  <li><strong>Background jobs</strong> — Generate forecasts async with Sidekiq</li>
+  <li><strong>Limit history</strong> — 2-3 years of data is usually sufficient</li>
+  <li><strong>Index your queries</strong> — The <code>get_historical_*_data</code> methods hit the database</li>
+</ul>
+
+<h2>What's Next?</h2>
+
+<p>In future posts, we'll cover:</p>
+<ul>
+  <li>Adding <strong>external factors</strong> (economic indicators, seasonality events)</li>
+  <li><strong>Backtesting</strong> to measure real forecast accuracy</li>
+  <li><strong>Auto-tuning</strong> hyperparameters (alpha, beta, weights)</li>
+  <li>Integrating with <strong>machine learning models</strong> for hybrid forecasting</li>
+</ul>
+
+<hr />
+
+<p><em>This forecasting engine is part of our accounts receivable platform, helping businesses predict cash flow and make better financial decisions.</em></p>
+    `.trim(),
+  },
 ];
 
