@@ -81,8 +81,10 @@ const BlogPost: React.FC = () => {
     return <Navigate to="/blog" replace />;
   }
 
-  const copyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
+  const shareOnTwitter = () => {
+    const text = encodeURIComponent(post.title);
+    const url = encodeURIComponent(window.location.href);
+    window.open(`https://x.com/intent/tweet?text=${text}&url=${url}`, '_blank', 'noopener,noreferrer');
   };
 
   // Parse date for machine-readable format
@@ -235,19 +237,12 @@ const BlogPost: React.FC = () => {
             </div>
             <div className="flex items-center gap-2">
               <button 
-                onClick={copyLink}
+                onClick={shareOnTwitter}
                 className="p-2.5 rounded-lg bg-slate-800/50 text-slate-400 hover:text-teal-400 hover:bg-slate-800 transition-all"
-                title="Copy link"
-                aria-label="Copy article link to clipboard"
+                title="Share on X"
+                aria-label="Share this article on X (Twitter)"
               >
                 <Share2 size={18} aria-hidden="true" />
-              </button>
-              <button 
-                className="p-2.5 rounded-lg bg-slate-800/50 text-slate-400 hover:text-teal-400 hover:bg-slate-800 transition-all"
-                title="Bookmark"
-                aria-label="Bookmark this article"
-              >
-                <Bookmark size={18} aria-hidden="true" />
               </button>
             </div>
           </div>
