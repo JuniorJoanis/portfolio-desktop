@@ -1602,8 +1602,8 @@ end</code></pre>
 <pre><code class="language-ruby">class FinanceReporting::ForecastService
   def initialize(merchant:, start_date: 1.year.ago, end_date: Date.today, forecast_periods: 6)
     @merchant = merchant
-    @start_date = start_date.in_time_zone("Amsterdam")
-    @end_date = end_date.in_time_zone("Amsterdam")
+    @start_date = start_date
+    @end_date = end_date
     @forecast_periods = forecast_periods
   end
 
