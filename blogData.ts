@@ -457,7 +457,7 @@ repos:
             location="europe-west1", 
             temperature=0.3,
             streaming=True,
-            model="gemini-3",
+            model="gemini-3-pro-preview",
             response_mime_type="application/json",
             callbacks=[FinalStreamingStdOutCallbackHandler()],
         )
