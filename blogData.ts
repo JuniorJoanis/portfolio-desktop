@@ -603,6 +603,8 @@ repos:
 
 <p>Here's a pattern we're particularly proud of. <strong>The problem:</strong> LangChain inspects function signatures to understand what parameters a tool accepts. But we also need to inject authentication tokens, API endpoints, and other config that the LLM shouldn't see or control.</p>
 
+<p>I was inspired by <a href="https://github.com/langchain-ai/langserve/discussions/534" target="_blank">this LangServe discussion</a> on passing authorization tokens to tools without exposing them to the LLM.</p>
+
 <p><strong>Our solution:</strong> A wrapper function that creates a closure around the config, returning a clean tool function that LangChain can introspect.</p>
 
 <pre><code class="language-python">def wrap_get_account_receivable_prioritization(wrapper_config: Dict[str, Any]):
