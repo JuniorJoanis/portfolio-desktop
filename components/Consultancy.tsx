@@ -236,7 +236,7 @@ const sections = [
       skills: ['LangChain', 'Vertex AI', 'HuggingFace', 'LLM Orchestration', 'AI Copilots'],
       projects: [
         { name: 'Delfyn', desc: 'AI copilots for accounts receivable automation', period: '2023-2025' },
-        { name: 'Abbove', desc: 'Wealth planning AI advisory systems', period: '2025-Present' },
+        { name: 'Abbove', desc: 'Wealth planning AI advisory systems', period: '2026-Present' },
       ]
     }
   },
