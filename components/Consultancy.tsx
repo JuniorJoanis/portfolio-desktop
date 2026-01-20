@@ -233,7 +233,7 @@ const sections = [
       'M 125 98 L 125 82 L 130 92 L 135 82 L 135 98',
     ],
     content: {
-      skills: ['LangChain', 'Vertex AI', 'HuggingFace', 'LLM Orchestration', 'AI Copilots', 'RAG Systems'],
+      skills: ['LangChain', 'Vertex AI', 'HuggingFace', 'LLM Orchestration', 'AI Copilots'],
       projects: [
         { name: 'Delfyn', desc: 'AI copilots for accounts receivable automation', period: '2023-2025' },
         { name: 'Abbove', desc: 'Wealth planning AI advisory systems', period: '2025-Present' },
@@ -503,9 +503,9 @@ function Consultancy() {
             </Link>
             <Link 
               to="/desktop"
-              className="text-sm bg-[#1a1a1a] hover:bg-gray-800 text-white px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg transition-all font-medium flex items-center gap-2"
+              className="text-sm text-gray-500 hover:text-gray-900 transition-colors p-2 hover:bg-gray-100 rounded-lg flex items-center gap-2"
             >
-              <Monitor size={16} />
+              <Monitor size={18} />
               <span className="hidden sm:inline">Desktop</span>
             </Link>
           </div>
