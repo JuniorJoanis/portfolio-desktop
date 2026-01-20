@@ -315,6 +315,7 @@ function Consultancy() {
   const [activeSection, setActiveSection] = useState(0);
   const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 });
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [introPhase, setIntroPhase] = useState(0); // 0: initial, 1: grid moving, 2: settling, 3: ready
   const [hasLoaded, setHasLoaded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollAccumulator = useRef(0);
@@ -322,10 +323,20 @@ function Consultancy() {
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
 
-  // Trigger animation after initial mount
+  // Simple intro sequence
   useEffect(() => {
-    const timer = setTimeout(() => setHasLoaded(true), 300);
-    return () => clearTimeout(timer);
+    // Show grid
+    const phase1 = setTimeout(() => setIntroPhase(1), 100);
+    // Show content
+    const phase2 = setTimeout(() => {
+      setIntroPhase(2);
+      setHasLoaded(true);
+    }, 800);
+    
+    return () => {
+      clearTimeout(phase1);
+      clearTimeout(phase2);
+    };
   }, []);
 
   // Mouse tracking for grid parallax
@@ -462,8 +473,12 @@ function Consultancy() {
     >
       {/* Isometric Grid Background */}
       <div 
-        className="fixed inset-0 pointer-events-none transition-transform duration-500 ease-out"
-        style={{ transform: gridTransform }}
+        className="fixed inset-0 pointer-events-none transition-all duration-[1.5s] ease-out"
+        style={{ 
+          transform: gridTransform,
+          opacity: introPhase >= 1 ? 1 : 0,
+          scale: introPhase >= 1 ? '1' : '1.1',
+        }}
       >
         <svg className="w-full h-full opacity-[0.08]" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -478,42 +493,57 @@ function Consultancy() {
       </div>
 
       {/* Navigation Bar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 px-4 sm:px-8 py-4 sm:py-6">
+      <nav 
+        className={`fixed top-0 left-0 right-0 z-50 px-4 sm:px-8 py-3 sm:py-6 transition-all duration-700 ease-out bg-[#FAFAFA]/80 backdrop-blur-sm sm:bg-transparent sm:backdrop-blur-none ${
+          hasLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'
+        }`}
+        style={{ transitionDelay: hasLoaded ? '0ms' : '0ms', paddingTop: 'max(0.75rem, env(safe-area-inset-top, 0px))' }}
+      >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4 sm:gap-6">
+          <div className="flex items-center gap-3 sm:gap-6">
             <span 
               className="text-lg font-semibold tracking-tight cursor-pointer hover:text-blue-600 transition-colors"
               onClick={() => { setIsTransitioning(true); setActiveSection(0); setTimeout(() => setIsTransitioning(false), 900); }}
             >
               JJ
             </span>
-            <div className="hidden md:flex items-center gap-1 text-xs text-gray-400 font-mono">
+            {/* Section indicator - visible on all screen sizes */}
+            <div className="flex items-center gap-1 text-xs text-gray-400 font-mono">
               <span className="text-blue-600">{String(activeSection + 1).padStart(2, '0')}</span>
               <span>/</span>
               <span>{String(sections.length).padStart(2, '0')}</span>
+              <span className="hidden sm:inline ml-2 text-gray-300">·</span>
+              <span className="hidden sm:inline text-gray-400 capitalize">{sections[activeSection].id}</span>
             </div>
           </div>
           
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1 sm:gap-3">
             <Link 
               to="/blog" 
-              className="text-sm text-gray-500 hover:text-gray-900 transition-colors p-2 hover:bg-gray-100 rounded-lg"
+              className="text-sm text-gray-500 hover:text-gray-900 transition-colors p-2.5 hover:bg-gray-100 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center"
+              aria-label="Blog"
             >
-              <BookOpen size={18} />
+              <BookOpen size={20} className="sm:w-[18px] sm:h-[18px]" />
             </Link>
             <Link 
               to="/desktop"
-              className="text-sm text-gray-500 hover:text-gray-900 transition-colors p-2 hover:bg-gray-100 rounded-lg flex items-center gap-2"
+              className="text-sm text-gray-500 hover:text-gray-900 transition-colors p-2.5 hover:bg-gray-100 rounded-lg flex items-center gap-2 min-h-[44px]"
+              aria-label="Desktop view"
             >
-              <Monitor size={18} />
+              <Monitor size={20} className="sm:w-[18px] sm:h-[18px]" />
               <span className="hidden sm:inline">Desktop</span>
             </Link>
           </div>
         </div>
       </nav>
 
-      {/* Section Navigation Dots */}
-      <div className="fixed left-8 top-1/2 -translate-y-1/2 z-50 hidden md:flex flex-col gap-4">
+      {/* Section Navigation Dots - Desktop only */}
+      <div 
+        className={`fixed left-8 top-1/2 -translate-y-1/2 z-50 hidden lg:flex flex-col gap-4 transition-all duration-700 ease-out ${
+          hasLoaded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'
+        }`}
+        style={{ transitionDelay: hasLoaded ? '200ms' : '0ms' }}
+      >
         {sections.map((section, index) => (
           <button
             key={section.id}
@@ -530,38 +560,48 @@ function Consultancy() {
                 : 'bg-gray-300 hover:bg-gray-400 hover:scale-110'
             }`}
           >
-            <span className={`absolute left-6 top-1/2 -translate-y-1/2 text-xs font-medium whitespace-nowrap transition-all duration-300 ${
-              index === activeSection ? 'opacity-100 text-blue-600' : 'opacity-0 group-hover:opacity-100 text-gray-500'
-            }`}>
-              {section.title}
-            </span>
+
           </button>
         ))}
       </div>
 
       {/* Arrow Navigation */}
-      <div className="fixed bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 sm:gap-4">
+      <div 
+        className={`fixed bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 sm:gap-4 transition-all duration-700 ease-out safe-area-bottom ${
+          hasLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+        }`}
+        style={{ transitionDelay: hasLoaded ? '300ms' : '0ms', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
         <button
           onClick={() => !isTransitioning && navigateSection(-1)}
           disabled={activeSection === 0 || isTransitioning}
-          className={`p-2 sm:p-3 rounded-full transition-all duration-300 ${
+          className={`p-3 sm:p-3 rounded-full transition-all duration-300 min-w-[44px] min-h-[44px] flex items-center justify-center ${
             activeSection === 0 
               ? 'opacity-30 cursor-not-allowed' 
-              : 'bg-white shadow-lg hover:shadow-xl hover:scale-110 text-gray-700 hover:text-blue-600'
+              : 'bg-white shadow-lg hover:shadow-xl active:scale-95 sm:hover:scale-110 text-gray-700 hover:text-blue-600'
           }`}
+          aria-label="Previous section"
         >
-          <ArrowLeft size={16} className="sm:w-5 sm:h-5" />
+          <ArrowLeft size={18} className="sm:w-5 sm:h-5" />
         </button>
         
-        <div className="flex items-center gap-1 sm:gap-2">
-          {sections.map((_, index) => (
-            <div
+        <div className="flex items-center gap-1.5 sm:gap-2 px-2">
+          {sections.map((section, index) => (
+            <button
               key={index}
-              className={`h-1 rounded-full transition-all duration-500 ${
+              onClick={() => {
+                if (!isTransitioning && index !== activeSection) {
+                  setIsTransitioning(true);
+                  setActiveSection(index);
+                  setTimeout(() => setIsTransitioning(false), 900);
+                }
+              }}
+              className={`h-1.5 sm:h-1 rounded-full transition-all duration-500 ${
                 index === activeSection 
-                  ? 'w-5 sm:w-8 bg-blue-600' 
-                  : 'w-1.5 sm:w-2 bg-gray-300'
+                  ? 'w-6 sm:w-8 bg-blue-600' 
+                  : 'w-1.5 sm:w-2 bg-gray-300 hover:bg-gray-400'
               }`}
+              aria-label={`Go to ${section.title}`}
             />
           ))}
         </div>
@@ -569,13 +609,14 @@ function Consultancy() {
         <button
           onClick={() => !isTransitioning && navigateSection(1)}
           disabled={activeSection === sections.length - 1 || isTransitioning}
-          className={`p-2 sm:p-3 rounded-full transition-all duration-300 ${
+          className={`p-3 sm:p-3 rounded-full transition-all duration-300 min-w-[44px] min-h-[44px] flex items-center justify-center ${
             activeSection === sections.length - 1 
               ? 'opacity-30 cursor-not-allowed' 
-              : 'bg-white shadow-lg hover:shadow-xl hover:scale-110 text-gray-700 hover:text-blue-600'
+              : 'bg-white shadow-lg hover:shadow-xl active:scale-95 sm:hover:scale-110 text-gray-700 hover:text-blue-600'
           }`}
+          aria-label="Next section"
         >
-          <ArrowRight size={16} className="sm:w-5 sm:h-5" />
+          <ArrowRight size={18} className="sm:w-5 sm:h-5" />
         </button>
       </div>
 
@@ -594,126 +635,77 @@ function Consultancy() {
           return (
             <section 
               key={section.id}
-              className="h-full w-screen flex-shrink-0 flex items-center justify-center px-4 sm:px-8 md:px-20 py-20 sm:py-0"
+              className="h-full w-screen flex-shrink-0 overflow-y-auto"
             >
-              <div className="max-w-6xl w-full grid lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-20 items-center">
-                {/* Blueprint Visualization */}
-                <div className="relative order-2 lg:order-1 hidden sm:block">
-                  <svg 
-                    viewBox="0 0 240 180" 
-                    className="w-full max-w-xs sm:max-w-md mx-auto"
-                    style={{ filter: 'drop-shadow(0 4px 20px rgba(37, 99, 235, 0.1))' }}
-                  >
-                    {/* Blueprint frame */}
-                    <rect 
-                      x="10" y="10" 
-                      width="220" height="160" 
-                      fill="none" 
-                      stroke="#e5e7eb" 
-                      strokeWidth="1"
-                      strokeDasharray="4 2"
-                    />
-                    
-                    {/* Animated blueprint lines */}
-                    {section.blueprint.map((d, i) => (
-                      <BlueprintLine
-                        key={i}
-                        d={d}
-                        delay={i * 0.15}
-                        duration={0.8}
-                        isActive={isActive && hasLoaded}
-                      />
-                    ))}
-                    
-                    {/* Corner marks */}
-                    <path d="M 10 25 L 10 10 L 25 10" fill="none" stroke="#2563eb" strokeWidth="2" />
-                    <path d="M 215 10 L 230 10 L 230 25" fill="none" stroke="#2563eb" strokeWidth="2" />
-                    <path d="M 230 155 L 230 170 L 215 170" fill="none" stroke="#2563eb" strokeWidth="2" />
-                    <path d="M 25 170 L 10 170 L 10 155" fill="none" stroke="#2563eb" strokeWidth="2" />
-                  </svg>
-                  
-                  {/* Blueprint label */}
-                  <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[10px] font-mono text-gray-400 tracking-widest uppercase">
-                    {section.id}.blueprint
-                  </div>
-                </div>
-
-                {/* Content */}
+              {/* Mobile Layout */}
+              <div className="lg:hidden min-h-full flex flex-col justify-center px-5 py-20">
                 <div 
-                  className="order-1 lg:order-2 transition-all duration-700 ease-out"
+                  className="transition-all duration-500 ease-out"
                   style={{
                     opacity: isActive ? 1 : 0,
-                    transform: isActive ? 'translateX(0)' : 'translateX(40px)',
-                    transitionDelay: isActive ? '0.3s' : '0s',
+                    transform: isActive ? 'translateY(0)' : 'translateY(20px)',
+                    transitionDelay: isActive ? '0.2s' : '0s',
                   }}
                 >
                   {/* Section indicator */}
                   {Icon && (
-                    <div className="inline-flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center">
-                        <Icon size={16} className="sm:w-5 sm:h-5 text-blue-600" />
+                    <div className="inline-flex items-center gap-2 mb-3">
+                      <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center">
+                        <Icon size={16} className="text-blue-600" />
                       </div>
-                      <span className="text-[10px] sm:text-xs font-mono text-gray-400 uppercase tracking-widest">
+                      <span className="text-[10px] font-mono text-gray-400 uppercase tracking-widest">
                         {section.subtitle}
                       </span>
                     </div>
                   )}
                   
                   {/* Title */}
-                  <h1 className="text-3xl sm:text-5xl md:text-7xl font-bold tracking-tight mb-4 sm:mb-6 leading-[0.95] whitespace-nowrap">
+                  <h1 className="text-3xl font-bold tracking-tight mb-3 leading-tight">
                     {section.title}
                   </h1>
                   
                   {/* Description */}
-                  <p className="text-base sm:text-lg md:text-xl text-gray-500 leading-relaxed mb-6 sm:mb-10 max-w-lg">
+                  <p className="text-sm text-gray-500 leading-relaxed mb-5">
                     {section.description}
                   </p>
 
-                  {/* Section-specific content */}
+                  {/* Mobile-specific section content rendered below */}
                   {section.id === 'intro' && section.content && (
-                    <div className="space-y-6 sm:space-y-8">
-                      {/* Stats */}
-                      <div className="flex flex-wrap gap-4 sm:gap-8">
+                    <div className="space-y-5">
+                      <div className="flex justify-between">
                         {section.content.stats?.map((stat) => (
                           <div key={stat.label}>
-                            <div className="text-2xl sm:text-3xl font-bold text-blue-600">{stat.value}</div>
-                            <div className="text-xs sm:text-sm text-gray-400">{stat.label}</div>
+                            <div className="text-2xl font-bold text-blue-600">{stat.value}</div>
+                            <div className="text-[10px] text-gray-400">{stat.label}</div>
                           </div>
                         ))}
                       </div>
-
-                      {/* Client logos */}
-                      {section.content.clients && (
-                        <div className="space-y-3">
-                          <p className="text-[10px] sm:text-xs font-mono text-gray-400 uppercase tracking-widest">Platforms I built serve</p>
-                          <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-                            {section.content.clients.map((client) => (
-                              <ClientLogo key={client.name} name={client.name} logo={client.logo} />
-                            ))}
-                          </div>
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-mono text-gray-400 uppercase tracking-wider">Trusted by</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {section.content.clients?.slice(0, 4).map((client) => (
+                            <ClientLogo key={client.name} name={client.name} logo={client.logo} />
+                          ))}
                         </div>
-                      )}
-                      
-                      {/* Contact links - compact inline design */}
-                      <div className="flex flex-wrap items-center gap-2">
+                      </div>
+                      <div className="flex items-center gap-2 pt-2">
                         <a
                           href={`mailto:${getObfuscatedEmail()}?subject=Consultancy%20Inquiry`}
-                          className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 sm:px-5 py-2 sm:py-2.5 rounded-full transition-all text-sm"
+                          className="inline-flex items-center gap-2 bg-blue-600 text-white font-medium px-5 py-3 rounded-full text-sm"
                         >
                           <Mail size={16} />
                           Let's Talk
                         </a>
-                        <span className="text-gray-300 mx-1 hidden sm:inline">|</span>
                         {section.content.links?.map(({ icon: LinkIcon, label, href }) => (
                           <a
                             key={label}
                             href={href}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-2 sm:p-2.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
-                            title={label}
+                            className="p-3 text-gray-400 hover:text-blue-600 rounded-full"
+                            aria-label={label}
                           >
-                            <LinkIcon size={18} className="sm:w-5 sm:h-5" />
+                            <LinkIcon size={20} />
                           </a>
                         ))}
                       </div>
@@ -721,31 +713,22 @@ function Consultancy() {
                   )}
 
                   {section.id === 'ai' && section.content && (
-                    <div className="space-y-6 sm:space-y-8">
-                      {/* Skills */}
-                      <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                    <div className="space-y-4">
+                      <div className="flex flex-wrap gap-1.5">
                         {section.content.skills?.map((skill) => (
-                          <span 
-                            key={skill}
-                            className="text-xs sm:text-sm bg-blue-50 text-blue-700 border border-blue-100 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium"
-                          >
+                          <span key={skill} className="text-xs bg-blue-50 text-blue-700 px-2.5 py-1.5 rounded-md font-medium">
                             {skill}
                           </span>
                         ))}
                       </div>
-                      
-                      {/* Projects */}
-                      <div className="space-y-3 sm:space-y-4">
+                      <div className="space-y-2">
                         {section.content.projects?.map((project) => (
-                          <div key={project.name} className="p-3 sm:p-4 bg-white rounded-xl border border-gray-100">
-                            <div className="flex items-start sm:items-center gap-3 mb-2">
-                              <CompanyLogo name={project.name} size="sm" />
-                              <div className="flex-1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0">
-                                <span className="font-semibold text-sm sm:text-base">{project.name}</span>
-                                <span className="text-[10px] sm:text-xs text-gray-400 font-mono">{project.period}</span>
-                              </div>
+                          <div key={project.name} className="p-3 bg-white rounded-lg border border-gray-100">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-semibold text-sm">{project.name}</span>
+                              <span className="text-[10px] text-gray-400 font-mono">{project.period}</span>
                             </div>
-                            <p className="text-xs sm:text-sm text-gray-500 ml-9 sm:ml-11">{project.desc}</p>
+                            <p className="text-xs text-gray-500">{project.desc}</p>
                           </div>
                         ))}
                       </div>
@@ -753,25 +736,22 @@ function Consultancy() {
                   )}
 
                   {section.id === 'scale' && section.content && (
-                    <div className="space-y-6 sm:space-y-8">
-                      {/* Skills */}
-                      <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                        {section.content.skills?.map((skill) => (
-                          <span 
-                            key={skill}
-                            className="text-xs sm:text-sm bg-gray-100 text-gray-700 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium"
-                          >
+                    <div className="space-y-4">
+                      <div className="flex flex-wrap gap-1.5">
+                        {section.content.skills?.slice(0, 6).map((skill) => (
+                          <span key={skill} className="text-xs bg-gray-100 text-gray-700 px-2.5 py-1.5 rounded-md font-medium">
                             {skill}
                           </span>
                         ))}
+                        {(section.content.skills?.length ?? 0) > 6 && (
+                          <span className="text-xs text-gray-400 px-2 py-1.5">+{(section.content.skills?.length ?? 0) - 6} more</span>
+                        )}
                       </div>
-                      
-                      {/* Achievements */}
-                      <div className="space-y-2 sm:space-y-3">
+                      <div className="space-y-2">
                         {section.content.achievements?.map((achievement, i) => (
-                          <div key={i} className="flex gap-2 sm:gap-3 items-start">
-                            <span className="text-blue-600 mt-0.5 sm:mt-1 text-sm sm:text-base">→</span>
-                            <span className="text-sm sm:text-base text-gray-600">{achievement}</span>
+                          <div key={i} className="flex gap-2 items-start">
+                            <span className="text-blue-600 text-sm">→</span>
+                            <span className="text-sm text-gray-600">{achievement}</span>
                           </div>
                         ))}
                       </div>
@@ -779,44 +759,167 @@ function Consultancy() {
                   )}
 
                   {section.id === 'leadership' && section.content && (
-                    <div className="space-y-3 sm:space-y-4">
+                    <div className="space-y-2">
                       {section.content.roles?.map((role) => (
-                        <div 
-                          key={role.company} 
-                          className={`p-3 sm:p-5 rounded-xl border transition-all ${
-                            role.current 
-                              ? 'bg-blue-50 border-blue-200' 
-                              : 'bg-white border-gray-100'
-                          }`}
-                        >
-                          <div className="flex items-start gap-3 sm:gap-4 mb-2">
-                            <CompanyLogo name={role.company} size="sm" />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                                <span className="font-semibold text-sm sm:text-base">{role.title}</span>
-                                {role.current && (
-                                  <span className="text-[8px] sm:text-[10px] bg-blue-600 text-white px-1.5 sm:px-2 py-0.5 rounded-full font-bold">
-                                    CURRENT
-                                  </span>
-                                )}
-                              </div>
-                              <div className="text-blue-600 font-medium text-sm sm:text-base">{role.company}</div>
-                            </div>
+                        <div key={role.company} className={`p-3 rounded-lg border ${role.current ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-100'}`}>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-semibold text-sm">{role.title}</span>
+                            {role.current && <span className="text-[8px] bg-blue-600 text-white px-1.5 py-0.5 rounded-full font-bold">NOW</span>}
                           </div>
-                          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-400 ml-9 sm:ml-14">
-                            <span className="flex items-center gap-1">
-                              <Calendar size={10} className="sm:w-3 sm:h-3" />
-                              {role.period}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <MapPin size={10} className="sm:w-3 sm:h-3" />
-                              {role.location}
-                            </span>
+                          <div className="text-blue-600 text-sm font-medium">{role.company}</div>
+                          <div className="flex gap-3 text-[11px] text-gray-400 mt-1">
+                            <span>{role.period}</span>
+                            <span>{role.location}</span>
                           </div>
                         </div>
                       ))}
                     </div>
                   )}
+                </div>
+              </div>
+
+              {/* Desktop Layout */}
+              <div className="hidden lg:flex h-full items-center justify-center px-20">
+                <div className="max-w-6xl w-full grid grid-cols-2 gap-16 items-center">
+                  {/* Blueprint Visualization */}
+                  <div className="relative">
+                    <svg 
+                      viewBox="0 0 240 180" 
+                      className="w-full max-w-md mx-auto"
+                      style={{ filter: 'drop-shadow(0 4px 20px rgba(37, 99, 235, 0.1))' }}
+                    >
+                      <rect x="10" y="10" width="220" height="160" fill="none" stroke="#e5e7eb" strokeWidth="1" strokeDasharray="4 2" />
+                      {section.blueprint.map((d, i) => (
+                        <BlueprintLine key={i} d={d} delay={i * 0.15} duration={0.8} isActive={isActive && hasLoaded} />
+                      ))}
+                      <path d="M 10 25 L 10 10 L 25 10" fill="none" stroke="#2563eb" strokeWidth="2" />
+                      <path d="M 215 10 L 230 10 L 230 25" fill="none" stroke="#2563eb" strokeWidth="2" />
+                      <path d="M 230 155 L 230 170 L 215 170" fill="none" stroke="#2563eb" strokeWidth="2" />
+                      <path d="M 25 170 L 10 170 L 10 155" fill="none" stroke="#2563eb" strokeWidth="2" />
+                    </svg>
+                    <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[10px] font-mono text-gray-400 tracking-widest uppercase">
+                      {section.id}.blueprint
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div 
+                    className="transition-all duration-700 ease-out"
+                    style={{
+                      opacity: isActive ? 1 : 0,
+                      transform: isActive ? 'translateX(0)' : 'translateX(40px)',
+                      transitionDelay: isActive ? '0.3s' : '0s',
+                    }}
+                  >
+                    {Icon && (
+                      <div className="inline-flex items-center gap-3 mb-6">
+                        <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center">
+                          <Icon size={20} className="text-blue-600" />
+                        </div>
+                        <span className="text-xs font-mono text-gray-400 uppercase tracking-widest">{section.subtitle}</span>
+                      </div>
+                    )}
+                    
+                    <h1 className="text-6xl xl:text-7xl font-bold tracking-tight mb-6 leading-[0.95]">{section.title}</h1>
+                    <p className="text-xl text-gray-500 leading-relaxed mb-10 max-w-lg">{section.description}</p>
+
+                    {section.id === 'intro' && section.content && (
+                      <div className="space-y-8">
+                        <div className="flex gap-8">
+                          {section.content.stats?.map((stat) => (
+                            <div key={stat.label}>
+                              <div className="text-3xl font-bold text-blue-600">{stat.value}</div>
+                              <div className="text-sm text-gray-400">{stat.label}</div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="space-y-3">
+                          <p className="text-xs font-mono text-gray-400 uppercase tracking-widest">Platforms I built serve</p>
+                          <div className="flex flex-wrap items-center gap-4">
+                            {section.content.clients?.map((client) => (
+                              <ClientLogo key={client.name} name={client.name} logo={client.logo} />
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <a href={`mailto:${getObfuscatedEmail()}?subject=Consultancy%20Inquiry`} className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-full transition-all text-sm">
+                            <Mail size={16} />Let's Talk
+                          </a>
+                          <span className="text-gray-300 mx-1">|</span>
+                          {section.content.links?.map(({ icon: LinkIcon, label, href }) => (
+                            <a key={label} href={href} target="_blank" rel="noopener noreferrer" className="p-2.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all" title={label}>
+                              <LinkIcon size={20} />
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {section.id === 'ai' && section.content && (
+                      <div className="space-y-8">
+                        <div className="flex flex-wrap gap-2">
+                          {section.content.skills?.map((skill) => (
+                            <span key={skill} className="text-sm bg-blue-50 text-blue-700 border border-blue-100 px-4 py-2 rounded-lg font-medium">{skill}</span>
+                          ))}
+                        </div>
+                        <div className="space-y-4">
+                          {section.content.projects?.map((project) => (
+                            <div key={project.name} className="p-4 bg-white rounded-xl border border-gray-100">
+                              <div className="flex items-center gap-3 mb-2">
+                                <CompanyLogo name={project.name} size="sm" />
+                                <div className="flex-1 flex items-center justify-between">
+                                  <span className="font-semibold">{project.name}</span>
+                                  <span className="text-xs text-gray-400 font-mono">{project.period}</span>
+                                </div>
+                              </div>
+                              <p className="text-sm text-gray-500 ml-11">{project.desc}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {section.id === 'scale' && section.content && (
+                      <div className="space-y-8">
+                        <div className="flex flex-wrap gap-2">
+                          {section.content.skills?.map((skill) => (
+                            <span key={skill} className="text-sm bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium">{skill}</span>
+                          ))}
+                        </div>
+                        <div className="space-y-3">
+                          {section.content.achievements?.map((achievement, i) => (
+                            <div key={i} className="flex gap-3 items-start">
+                              <span className="text-blue-600 mt-1">→</span>
+                              <span className="text-gray-600">{achievement}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {section.id === 'leadership' && section.content && (
+                      <div className="space-y-4">
+                        {section.content.roles?.map((role) => (
+                          <div key={role.company} className={`p-5 rounded-xl border ${role.current ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-100'}`}>
+                            <div className="flex items-start gap-4 mb-2">
+                              <CompanyLogo name={role.company} size="sm" />
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold">{role.title}</span>
+                                  {role.current && <span className="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded-full font-bold">NOW</span>}
+                                </div>
+                                <div className="text-blue-600 font-medium">{role.company}</div>
+                              </div>
+                            </div>
+                            <div className="flex gap-4 text-sm text-gray-400 ml-14">
+                              <span className="flex items-center gap-1"><Calendar size={12} />{role.period}</span>
+                              <span className="flex items-center gap-1"><MapPin size={12} />{role.location}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </section>
@@ -825,15 +928,25 @@ function Consultancy() {
       </div>
 
       {/* Scroll hint (only on intro) */}
-      {activeSection === 0 && (
-        <div className="fixed bottom-24 sm:bottom-24 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs text-gray-400 font-mono animate-pulse text-center px-4">
-          <span className="hidden sm:inline">Scroll or use arrows to navigate</span>
-          <span className="sm:hidden">Swipe or tap arrows</span>
+      {activeSection === 0 && hasLoaded && (
+        <div 
+          className={`fixed bottom-[72px] lg:bottom-24 left-1/2 -translate-x-1/2 text-[10px] lg:text-xs text-gray-400 font-mono animate-pulse text-center px-4 transition-all duration-700 ease-out ${
+            hasLoaded ? 'opacity-100' : 'opacity-0'
+          }`}
+          style={{ transitionDelay: '600ms' }}
+        >
+          <span className="hidden lg:inline">Scroll or use arrows to navigate</span>
+          <span className="lg:hidden">Swipe or tap arrows</span>
         </div>
       )}
 
-      {/* Footer - Company info (left) */}
-      <div className="fixed bottom-8 left-4 sm:left-8 z-50 hidden md:block">
+      {/* Footer - Company info (left) - Desktop only */}
+      <div 
+        className={`fixed bottom-8 left-8 z-50 hidden lg:block transition-all duration-700 ease-out ${
+          hasLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+        }`}
+        style={{ transitionDelay: hasLoaded ? '400ms' : '0ms' }}
+      >
         <div className="text-[10px] font-mono text-gray-400 space-y-1">
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 bg-blue-600 rounded-full"></span>
@@ -843,8 +956,13 @@ function Consultancy() {
         </div>
       </div>
 
-      {/* Footer links (right) */}
-      <div className="fixed bottom-8 right-4 sm:right-8 z-50 hidden sm:flex items-center gap-2 sm:gap-4 text-[10px] sm:text-xs text-gray-400">
+      {/* Footer links (right) - Desktop only */}
+      <div 
+        className={`fixed bottom-8 right-8 z-50 hidden lg:flex items-center gap-4 text-xs text-gray-400 transition-all duration-700 ease-out ${
+          hasLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+        }`}
+        style={{ transitionDelay: hasLoaded ? '400ms' : '0ms' }}
+      >
         <Link to="/blog" className="hover:text-blue-600 transition-colors">Blog</Link>
         <span>·</span>
         <a href={`mailto:${getObfuscatedEmail()}`} className="hover:text-blue-600 transition-colors">Contact</a>
