@@ -194,7 +194,7 @@ const sections = [
     title: 'AI Orchestration',
     subtitle: 'Intelligent Systems',
     icon: Brain,
-    description: 'Designing and implementing AI-first architectures. LLM orchestration, copilots, and intelligent automation at scale.',
+    description: 'I design and implement AI-first architectures, from LLM orchestration to scalable copilots and intelligent automation.',
     blueprint: [
       // Chip outer frame
       'M 70 40 L 170 40 L 170 140 L 70 140 Z',
@@ -245,7 +245,7 @@ const sections = [
     title: 'Scaling',
     subtitle: 'Architecture & Infrastructure',
     icon: Layers,
-    description: 'From zero to 100k+ users. Multi-cloud infrastructure, high availability, and performance optimization.',
+    description: 'I scale products from zero to 100k+ users through resilient multi-cloud infrastructure, high availability, and performance optimization.',
     blueprint: [
       // Rocket nose
       'M 120 25 L 100 60 L 140 60 Z',
@@ -292,7 +292,7 @@ const sections = [
     title: 'Leadership',
     subtitle: 'Teams & Strategy',
     icon: Users,
-    description: 'Building and leading high-performance engineering teams. From startup co-founder to enterprise CTO.',
+    description: 'I build and lead high-performance engineering teams, from startup co-founder to enterprise CTO.',
     blueprint: [
       'M 120 30 L 120 50',
       'M 120 50 L 60 90 M 120 50 L 180 90',
