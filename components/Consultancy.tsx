@@ -303,7 +303,7 @@ const sections = [
     ],
     content: {
       roles: [
-        { title: 'Technical Architect', company: 'Abbove', location: 'Brussels (Remote)', period: 'Oct 2025 – Present', current: true },
+        { title: 'Technical Architect', company: 'Abbove', location: 'Brussels (Remote)', period: 'Jan 2026 – Present', current: true },
         { title: 'Co-Founder & CTO', company: 'Delfyn', location: 'Amsterdam', period: 'Dec 2023 – Oct 2025' },
         { title: 'CTO', company: 'Moodwork', location: 'Paris', period: 'Dec 2016 – Nov 2023' },
       ]
