@@ -89,7 +89,7 @@ export const PROJECTS: ProjectItem[] = [
     title: "Delfyn",
     description: "AI-driven Accounts Receivable automation platform. Built with Payment Orchestration and Reconciliation algorithms to help finance teams automate cash collection.",
     tags: ["Fintech", "AI Agent", "Rails", "React", "GCP"],
-    link: "https://delfyn.co",
+    link: "https://www.linkedin.com/feed/update/urn:li:activity:7350493448266772480",
     metric: "AR Automation",
     about: "This project represents a key milestone in my career, leveraging advanced technologies to solve complex problems in the Fintech space. It involved not only the development of the product, but also founding the company and talking to customers and partners to understand their needs and how to best serve them.",
     features: [

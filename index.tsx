@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import App from './App';
+import Consultancy from './components/Consultancy';
 import BlogList from './components/blog/BlogList';
 import BlogPost from './components/blog/BlogPost';
 
@@ -20,7 +21,8 @@ root.render(
   <React.StrictMode>
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<App />} />
+        <Route path="/" element={<Consultancy />} />
+        <Route path="/desktop" element={<App />} />
         <Route path="/blog" element={<BlogList />} />
         <Route path="/blog/:slug" element={<BlogPost />} />
       </Routes>

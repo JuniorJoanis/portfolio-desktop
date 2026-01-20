@@ -1,11 +1,11 @@
 /**
  * SEO Files Generator Script
  * 
- * Run this script to regenerate sitemap.xml and rss.xml when adding new blog posts.
+ * Run this script to regenerate sitemap.xml when adding new blog posts.
  * 
  * Usage: npx tsx scripts/generate-seo-files.ts
  * 
- * This ensures search engines and RSS readers always have up-to-date content.
+ * This ensures search engines always have up-to-date content.
  */
 
 import * as fs from 'fs';
@@ -47,13 +47,6 @@ function parseDate(dateStr: string): string {
   }
   
   return new Date().toISOString().split('T')[0];
-}
-
-// Parse date to RFC 822 format for RSS
-function parseToRFC822(dateStr: string): string {
-  const isoDate = parseDate(dateStr);
-  const date = new Date(isoDate);
-  return date.toUTCString();
 }
 
 // Escape XML special characters
@@ -141,60 +134,6 @@ function generateSitemap(posts: BlogPostData[]): string {
   return sitemap;
 }
 
-// Generate rss.xml
-function generateRSS(posts: BlogPostData[]): string {
-  const now = new Date().toUTCString();
-  
-  let rss = `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" 
-     xmlns:atom="http://www.w3.org/2005/Atom"
-     xmlns:dc="http://purl.org/dc/elements/1.1/"
-     xmlns:content="http://purl.org/rss/1.0/modules/content/">
-  <channel>
-    <title>${AUTHOR_NAME} - Engineering Blog</title>
-    <link>${SITE_URL}/blog</link>
-    <description>Deep dives into architecture decisions, engineering leadership, and building products that scale. From authentication flows to AI integrations.</description>
-    <language>en-us</language>
-    <managingEditor>${AUTHOR_EMAIL} (${AUTHOR_NAME})</managingEditor>
-    <webMaster>${AUTHOR_EMAIL} (${AUTHOR_NAME})</webMaster>
-    <copyright>Copyright ${new Date().getFullYear()} ${AUTHOR_NAME}. All rights reserved.</copyright>
-    <lastBuildDate>${now}</lastBuildDate>
-    <atom:link href="${SITE_URL}/rss.xml" rel="self" type="application/rss+xml"/>
-    <image>
-      <url>${SITE_URL}/og-image.jpg</url>
-      <title>${AUTHOR_NAME} - Engineering Blog</title>
-      <link>${SITE_URL}/blog</link>
-    </image>
-    
-`;
-
-  posts.forEach(post => {
-    const pubDate = parseToRFC822(post.date);
-    const categories = post.tags.map(tag => `      <category>${escapeXml(tag)}</category>`).join('\n');
-    
-    rss += `    <item>
-      <title>${escapeXml(post.title)}</title>
-      <link>${SITE_URL}/blog/${post.slug}</link>
-      <guid isPermaLink="true">${SITE_URL}/blog/${post.slug}</guid>
-      <pubDate>${pubDate}</pubDate>
-      <dc:creator>${AUTHOR_NAME}</dc:creator>
-${categories}
-      <description><![CDATA[${post.excerpt}]]></description>
-      <content:encoded><![CDATA[
-        <p>${post.excerpt}</p>
-        <p><a href="${SITE_URL}/blog/${post.slug}">Read the full article →</a></p>
-      ]]></content:encoded>
-    </item>
-    
-`;
-  });
-
-  rss += `  </channel>
-</rss>`;
-
-  return rss;
-}
-
 // Main execution
 async function main() {
   // Read blog data from the source file
@@ -210,12 +149,10 @@ async function main() {
   console.log('📝 To update SEO files when adding new blog posts:');
   console.log('   1. Add your new post to blogData.ts');
   console.log('   2. Copy the post details to public/sitemap.xml');
-  console.log('   3. Copy the post details to public/rss.xml');
-  console.log('   4. Update public/llms.txt with the new article summary\n');
+  console.log('   3. Update public/llms.txt with the new article summary\n');
   
   console.log('📁 Files to update:');
   console.log('   - public/sitemap.xml (add new <url> entry)');
-  console.log('   - public/rss.xml (add new <item> entry)');
   console.log('   - public/llms.txt (add article to Featured Articles section)');
 }
 

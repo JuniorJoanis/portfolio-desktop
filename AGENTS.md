@@ -104,8 +104,7 @@ The project uses multiple SEO techniques:
 1. **Pre-rendering** (`scripts/prerender-blog.ts`): Generates static HTML with correct meta tags for blog posts at build time
 2. **Dynamic Meta Tags** (`utils/seo.ts`): Updates meta tags client-side for SPAs
 3. **Structured Data**: JSON-LD for Person, WebSite, Article schemas
-4. **RSS Feed**: `/rss.xml` for content syndication
-5. **LLMs.txt**: `/llms.txt` for AI model discovery
+4. **LLMs.txt**: `/llms.txt` for AI model discovery
 
 ## Code Style & Conventions
 
