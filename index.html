@@ -347,11 +347,209 @@
         -webkit-box-orient: vertical;
         overflow: hidden;
       }
+      
+      /* Global Loading Screen */
+      .loading-screen {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #FAFAFA;
+        transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+      }
+      .loading-screen.fade-out {
+        opacity: 0;
+        transform: scale(1.02);
+      }
+      .loading-glow {
+        position: absolute;
+        width: 600px;
+        height: 600px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(37, 99, 235, 0.08) 0%, rgba(37, 99, 235, 0.03) 40%, transparent 70%);
+        animation: loading-pulse-glow 2s ease-in-out infinite;
+      }
+      .loading-ring {
+        position: absolute;
+        width: 800px;
+        height: 800px;
+        border-radius: 50%;
+        background: radial-gradient(circle, transparent 50%, rgba(37, 99, 235, 0.02) 60%, transparent 70%);
+        animation: loading-pulse-ring 2.5s ease-in-out infinite;
+      }
+      .loading-dot {
+        position: absolute;
+        border-radius: 50%;
+        background: rgba(37, 99, 235, 0.2);
+        animation: loading-float-dot 4s ease-in-out infinite;
+      }
+      .loading-dot:nth-child(3) { width: 3px; height: 3px; top: 32%; left: 68%; animation-delay: 0s; }
+      .loading-dot:nth-child(4) { width: 5px; height: 5px; top: 38%; left: 72%; animation-delay: 0.15s; }
+      .loading-dot:nth-child(5) { width: 4px; height: 4px; top: 50%; left: 74%; animation-delay: 0.3s; }
+      .loading-dot:nth-child(6) { width: 3px; height: 3px; top: 62%; left: 70%; animation-delay: 0.45s; }
+      .loading-dot:nth-child(7) { width: 5px; height: 5px; top: 68%; left: 62%; animation-delay: 0.6s; }
+      .loading-dot:nth-child(8) { width: 4px; height: 4px; top: 68%; left: 50%; animation-delay: 0.75s; }
+      .loading-dot:nth-child(9) { width: 3px; height: 3px; top: 62%; left: 38%; animation-delay: 0.9s; }
+      .loading-dot:nth-child(10) { width: 5px; height: 5px; top: 50%; left: 32%; animation-delay: 1.05s; }
+      .loading-corner {
+        position: absolute;
+        width: 32px;
+        height: 32px;
+        border-color: rgba(37, 99, 235, 0.1);
+        animation: loading-fade-pulse 3s ease-in-out infinite;
+      }
+      .loading-corner-tl { top: 25%; left: 25%; border-left: 1px solid; border-top: 1px solid; }
+      .loading-corner-tr { top: 25%; right: 25%; border-right: 1px solid; border-top: 1px solid; animation-delay: 0.5s; }
+      .loading-corner-bl { bottom: 25%; left: 25%; border-left: 1px solid; border-bottom: 1px solid; animation-delay: 1s; }
+      .loading-corner-br { bottom: 25%; right: 25%; border-right: 1px solid; border-bottom: 1px solid; animation-delay: 1.5s; }
+      .loading-brand {
+        position: relative;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 0 1.5rem;
+        animation: loading-fade-in-up 0.8s ease-out forwards;
+      }
+      .loading-line {
+        width: 3rem;
+        height: 1px;
+        background: linear-gradient(to right, transparent, rgba(37, 99, 235, 0.4), transparent);
+        margin: 1.5rem 0;
+        animation: loading-expand-line 1s ease-out forwards;
+      }
+      .loading-text {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+      .loading-name {
+        font-size: 0.875rem;
+        font-weight: 500;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: rgba(37, 99, 235, 0.5);
+        animation: loading-fade-pulse 2s ease-in-out infinite;
+      }
+      .loading-ventures {
+        font-size: 1.5rem;
+        font-weight: 300;
+        letter-spacing: 0.05em;
+        color: rgba(30, 41, 59, 0.3);
+        font-family: 'Instrument Serif', serif;
+        animation: loading-fade-pulse 2s ease-in-out infinite;
+        animation-delay: 0.2s;
+      }
+      @media (min-width: 640px) {
+        .loading-ventures { font-size: 1.875rem; }
+      }
+      .loading-dots {
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+        margin-top: 2rem;
+      }
+      .loading-dots span {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: rgba(37, 99, 235, 0.3);
+        animation: loading-dot-pulse 1.2s ease-in-out infinite;
+      }
+      .loading-dots span:nth-child(2) { animation-delay: 0.15s; }
+      .loading-dots span:nth-child(3) { animation-delay: 0.3s; }
+      
+      @keyframes loading-pulse-glow {
+        0%, 100% { transform: scale(0.95); opacity: 1; }
+        50% { transform: scale(1.08); opacity: 0.6; }
+      }
+      @keyframes loading-pulse-ring {
+        0%, 100% { transform: scale(0.9); opacity: 0.5; }
+        50% { transform: scale(1.15); opacity: 0.15; }
+      }
+      @keyframes loading-float-dot {
+        0%, 100% { transform: translate(0, 0) scale(1); }
+        25% { transform: translate(6px, -10px) scale(1.1); }
+        50% { transform: translate(-4px, -15px) scale(0.9); }
+        75% { transform: translate(-10px, -5px) scale(1.05); }
+      }
+      @keyframes loading-fade-pulse {
+        0%, 100% { opacity: 0.5; }
+        50% { opacity: 1; }
+      }
+      @keyframes loading-fade-in-up {
+        0% { opacity: 0; transform: translateY(10px); }
+        100% { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes loading-expand-line {
+        0% { width: 0; opacity: 0; }
+        100% { width: 3rem; opacity: 1; }
+      }
+      @keyframes loading-dot-pulse {
+        0%, 100% { opacity: 0.3; transform: scale(1); }
+        50% { opacity: 1; transform: scale(1.3); }
+      }
     </style>
 </head>
   <body class="h-full w-full">
+    <!-- Global Loading Effect - Joanis Innovative Ventures -->
+    <div id="loading-screen" class="loading-screen">
+      <!-- Central radial glow -->
+      <div class="loading-glow"></div>
+      <div class="loading-ring"></div>
+      
+      <!-- Floating dots -->
+      <div class="loading-dot" style="--i: 0"></div>
+      <div class="loading-dot" style="--i: 1"></div>
+      <div class="loading-dot" style="--i: 2"></div>
+      <div class="loading-dot" style="--i: 3"></div>
+      <div class="loading-dot" style="--i: 4"></div>
+      <div class="loading-dot" style="--i: 5"></div>
+      <div class="loading-dot" style="--i: 6"></div>
+      <div class="loading-dot" style="--i: 7"></div>
+      
+      <!-- Corner accents -->
+      <div class="loading-corner loading-corner-tl"></div>
+      <div class="loading-corner loading-corner-tr"></div>
+      <div class="loading-corner loading-corner-bl"></div>
+      <div class="loading-corner loading-corner-br"></div>
+      
+      <!-- Center branding -->
+      <div class="loading-brand">
+        <div class="loading-line"></div>
+        <div class="loading-text">
+          <div class="loading-name">Joanis</div>
+          <div class="loading-ventures">Innovative Ventures</div>
+        </div>
+        <div class="loading-line"></div>
+        <div class="loading-dots">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    </div>
+    
     <div id="root" class="h-full w-full"></div>
     <script type="module" src="/index.tsx"></script>
+    
+    <!-- Loading screen fade out -->
+    <script>
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          var loader = document.getElementById('loading-screen');
+          if (loader) {
+            loader.classList.add('fade-out');
+            setTimeout(function() {
+              loader.style.display = 'none';
+            }, 500);
+          }
+        }, 500);
+      });
+    </script>
     
     <!-- Prism.js for syntax highlighting -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
