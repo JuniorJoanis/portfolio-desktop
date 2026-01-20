@@ -724,6 +724,18 @@ function Consultancy() {
                               <span className="text-[10px] text-gray-400 font-mono">{project.period}</span>
                             </div>
                             <p className="text-xs text-gray-500">{project.desc}</p>
+                            {project.name === 'Delfyn' && (
+                              <Link 
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                to="/blog/building-ai-copilot-accounts-receivable" 
+                                className="inline-flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-700 font-medium mt-2"
+                              >
+                                <BookOpen size={12} />
+                                Read the technical deep dive
+                                <ArrowRight size={10} />
+                              </Link>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -868,6 +880,16 @@ function Consultancy() {
                                 </div>
                               </div>
                               <p className="text-sm text-gray-500 ml-11">{project.desc}</p>
+                              {project.name === 'Delfyn' && (
+                                <Link 
+                                  to="/blog/building-ai-copilot-accounts-receivable" 
+                                  className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 font-medium mt-3 ml-11 transition-colors"
+                                >
+                                  <BookOpen size={14} />
+                                  Read the technical deep dive
+                                  <ArrowRight size={12} />
+                                </Link>
+                              )}
                             </div>
                           ))}
                         </div>
