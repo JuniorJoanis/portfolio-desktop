@@ -9,7 +9,7 @@ import Game from './components/apps/Game';
 import Slack from './components/apps/Slack';
 import Browser from './components/apps/Browser';
 import { AppId, WindowState } from './types';
-import { TerminalSquare, FileText, Globe, Gamepad2, Hash, BookOpen } from 'lucide-react';
+import { TerminalSquare, FileText, Globe, Gamepad2, Hash, BookOpen, Briefcase } from 'lucide-react';
 
 // Helper function to detect mobile devices
 const isMobile = (): boolean => {
@@ -275,6 +275,11 @@ function App() {
           icon={BookOpen} 
           label="Blog" 
           onClick={() => navigate('/blog')} 
+        />
+        <DesktopIcon 
+          icon={Briefcase} 
+          label="Consultancy" 
+          onClick={() => navigate('/')} 
         />
       </div>
 

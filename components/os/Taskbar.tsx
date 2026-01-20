@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AppId, WindowState } from '../../types';
-import { Battery, Wifi, BookOpen } from 'lucide-react';
+import { Battery, Wifi, BookOpen, Briefcase } from 'lucide-react';
 
 interface TaskbarProps {
   windows: WindowState[];
@@ -20,6 +20,7 @@ const Taskbar: React.FC<TaskbarProps> = ({ windows, activeWindowId, onToggleWind
   }, []);
 
   const isBlogActive = location.pathname.startsWith('/blog');
+  const isConsultancyActive = location.pathname === '/';
 
   return (
     <div className="h-12 md:h-12 bg-[#1e293b]/80 backdrop-blur-md border-t border-white/10 fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between px-2 md:px-4">
@@ -66,13 +67,29 @@ const Taskbar: React.FC<TaskbarProps> = ({ windows, activeWindowId, onToggleWind
           onClick={() => navigate('/blog')}
           className={`
             group relative h-9 w-9 md:h-10 md:w-10 flex items-center justify-center rounded-lg transition-all flex-shrink-0 touch-manipulation
-            ${isBlogActive ? 'bg-white/10' : 'hover:bg-white/5 active:bg-white/10'}
+            ${isBlogActive ? 'bg-white/10 opacity-100' : 'hover:bg-white/5 active:bg-white/10 opacity-50'}
           `}
           title="Blog"
         >
           <BookOpen size={18} className={`md:w-5 md:h-5 ${isBlogActive ? 'text-blue-400' : 'text-slate-300'}`} />
           {/* Active Indicator */}
           {isBlogActive && (
+            <span className="absolute bottom-0.5 w-1 h-1 rounded-full bg-blue-400" />
+          )}
+        </button>
+        
+        {/* Consultancy Button */}
+        <button
+          onClick={() => navigate('/')}
+          className={`
+            group relative h-9 w-9 md:h-10 md:w-10 flex items-center justify-center rounded-lg transition-all flex-shrink-0 touch-manipulation
+            ${isConsultancyActive ? 'bg-white/10 opacity-100' : 'hover:bg-white/5 active:bg-white/10 opacity-50'}
+          `}
+          title="Consultancy"
+        >
+          <Briefcase size={18} className={`md:w-5 md:h-5 ${isConsultancyActive ? 'text-blue-400' : 'text-slate-300'}`} />
+          {/* Active Indicator */}
+          {isConsultancyActive && (
             <span className="absolute bottom-0.5 w-1 h-1 rounded-full bg-blue-400" />
           )}
         </button>

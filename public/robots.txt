@@ -26,9 +26,6 @@ Allow: /
 # Sitemap
 Sitemap: https://joanis.co/sitemap.xml
 
-# RSS Feed
-# RSS: https://joanis.co/rss.xml
-
 # LLMs.txt for AI model context
 # LLMs: https://joanis.co/llms.txt
 

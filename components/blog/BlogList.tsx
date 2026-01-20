@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Clock, ArrowRight, Sparkles, Rss } from 'lucide-react';
+import { Calendar, Clock, ArrowRight, Sparkles } from 'lucide-react';
 import BlogLayout from './BlogLayout';
 import { BLOG_POSTS } from '../../blogData';
 import {
@@ -46,19 +46,10 @@ const BlogList: React.FC = () => {
               <span className="italic text-teal-400">craft</span>
               <span className="text-slate-100"> & code</span>
             </h1>
-            <p className="text-lg text-slate-400 leading-relaxed mb-6" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            <p className="text-lg text-slate-400 leading-relaxed" style={{ fontFamily: "'DM Sans', sans-serif" }}>
               Deep dives into architecture decisions, engineering leadership, and building 
               products that scale. From authentication flows to AI integrations.
             </p>
-            {/* RSS Feed Link for content syndication */}
-            <a 
-              href="/rss.xml"
-              className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-teal-400 transition-colors"
-              title="Subscribe via RSS"
-            >
-              <Rss size={14} />
-              <span>Subscribe to RSS</span>
-            </a>
           </div>
         </div>
       </section>

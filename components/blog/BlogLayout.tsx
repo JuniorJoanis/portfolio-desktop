@@ -75,13 +75,13 @@ const BlogLayout: React.FC<BlogLayoutProps> = ({ children }) => {
                 className="w-6 h-6 rounded object-cover"
               />
               <span className="text-sm text-slate-500">
-                © 2026 Junior Joanis
+                © {new Date().getFullYear()} Junior Joanis
               </span>
             </div>
             <div className="flex items-center gap-8 text-sm text-slate-500">
-              <Link to="/" className="hover:text-teal-400 transition-colors">Portfolio</Link>
-              <Link to="/blog" className="hover:text-teal-400 transition-colors">Blog</Link>
-              <a href="/rss.xml" className="hover:text-teal-400 transition-colors" title="RSS Feed">RSS</a>
+              <Link to="/" className="hover:text-teal-400 transition-colors">Consultancy</Link>
+              <Link to="/desktop" className="hover:text-teal-400 transition-colors">Desktop</Link>
+              <a href="/blog" className="hover:text-teal-400 transition-colors" title="Blog">Blog</a>
               <a href={getEmailMailtoLink()} className="hover:text-teal-400 transition-colors">Contact</a>
             </div>
           </div>
