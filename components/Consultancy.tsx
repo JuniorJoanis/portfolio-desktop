@@ -660,7 +660,7 @@ function Consultancy() {
                   )}
                   
                   {/* Title */}
-                  <h1 className="text-3xl sm:text-5xl md:text-7xl font-bold tracking-tight mb-4 sm:mb-6 leading-[0.95]">
+                  <h1 className="text-3xl sm:text-5xl md:text-7xl font-bold tracking-tight mb-4 sm:mb-6 leading-[0.95] whitespace-nowrap">
                     {section.title}
                   </h1>
                   
