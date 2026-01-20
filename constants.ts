@@ -154,7 +154,8 @@ export const SOCIALS: SocialLink[] = [
   { platform: "GitHub", url: "https://github.com/JuniorJoanis", icon: "github" },
   { platform: "LinkedIn", url: "https://www.linkedin.com/in/juniorjoanis/", icon: "linkedin" },
   { platform: "Twitter/X", url: "https://x.com/juniorjoanis", icon: "twitter" },
-  { platform: "Email", url: getEmailMailtoLink(), icon: "mail" }
+  { platform: "Email", url: getEmailMailtoLink(), icon: "mail" },
+  { platform: "Calendar", url: "https://calendly.com/junior-joanis/intro-call", icon: "calendar"}
 ];
 
 export const CHART_DATA = [

@@ -149,7 +149,7 @@ const sections = [
     title: BIO.name,
     subtitle: 'CTO & Technical Architect',
     icon: null,
-    description: 'Building products that scale. 12+ years crafting SaaS platforms trusted by industry leaders.',
+    description: 'I help startups and scaleups design and scale SaaS products, backed by 12+ years of experience with industry leaders.',
     blueprint: [
       // Board outer frame
       'M 20 25 L 220 25 L 220 155 L 20 155 Z',
@@ -517,23 +517,16 @@ function Consultancy() {
             </div>
           </div>
           
-          <div className="flex items-center gap-1 sm:gap-3">
-            <Link 
-              to="/blog" 
-              className="text-sm text-gray-500 hover:text-gray-900 transition-colors p-2.5 hover:bg-gray-100 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center"
-              aria-label="Blog"
-            >
-              <BookOpen size={20} className="sm:w-[18px] sm:h-[18px]" />
-            </Link>
-            <Link 
-              to="/desktop"
-              className="text-sm text-gray-500 hover:text-gray-900 transition-colors p-2.5 hover:bg-gray-100 rounded-lg flex items-center gap-2 min-h-[44px]"
-              aria-label="Desktop view"
-            >
-              <Monitor size={20} className="sm:w-[18px] sm:h-[18px]" />
-              <span className="hidden sm:inline">Desktop</span>
-            </Link>
-          </div>
+          <a 
+            href={getSocialUrl('Calendar')}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-full transition-all text-sm"
+          >
+            <Calendar size={16} />
+            <span className="hidden sm:inline">Schedule a call</span>
+            <span className="sm:hidden">Book</span>
+          </a>
         </div>
       </nav>
 
@@ -690,10 +683,12 @@ function Consultancy() {
                       </div>
                       <div className="flex items-center gap-2 pt-2">
                         <a
-                          href={`mailto:${getObfuscatedEmail()}?subject=Consultancy%20Inquiry`}
+                          href={getSocialUrl('Calendar')}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           className="inline-flex items-center gap-2 bg-blue-600 text-white font-medium px-5 py-3 rounded-full text-sm"
                         >
-                          <Mail size={16} />
+                          <Calendar size={16} />
                           Let's Talk
                         </a>
                         {section.content.links?.map(({ icon: LinkIcon, label, href }) => (
@@ -842,8 +837,8 @@ function Consultancy() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <a href={`mailto:${getObfuscatedEmail()}?subject=Consultancy%20Inquiry`} className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-full transition-all text-sm">
-                            <Mail size={16} />Let's Talk
+                          <a href={getSocialUrl('Calendar')} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-full transition-all text-sm">
+                            <Calendar size={16} />Let's Talk
                           </a>
                           <span className="text-gray-300 mx-1">|</span>
                           {section.content.links?.map(({ icon: LinkIcon, label, href }) => (
@@ -963,13 +958,42 @@ function Consultancy() {
         }`}
         style={{ transitionDelay: hasLoaded ? '400ms' : '0ms' }}
       >
-        <Link to="/blog" className="hover:text-blue-600 transition-colors">Blog</Link>
+        <Link to="/blog" className="hover:text-blue-600 transition-colors flex items-center gap-1.5">
+          <BookOpen size={14} />
+          Blog
+        </Link>
         <span>·</span>
-        <a href={`mailto:${getObfuscatedEmail()}`} className="hover:text-blue-600 transition-colors">Contact</a>
+        <Link to="/desktop" className="hover:text-blue-600 transition-colors flex items-center gap-1.5">
+          <Monitor size={14} />
+          Desktop
+        </Link>
         <span>·</span>
         <a href={getSocialUrl('GitHub')} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 transition-colors">Github</a>
         <span>·</span>
         <a href={getSocialUrl('LinkedIn')} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 transition-colors">LinkedIn</a>
+      </div>
+      
+      {/* Mobile footer with Blog/Desktop links */}
+      <div 
+        className={`fixed bottom-4 right-4 z-40 flex lg:hidden items-center gap-2 transition-all duration-700 ease-out ${
+          hasLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+        }`}
+        style={{ transitionDelay: hasLoaded ? '400ms' : '0ms', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
+        <Link 
+          to="/blog" 
+          className="p-2.5 bg-white/80 backdrop-blur-sm text-gray-500 hover:text-blue-600 rounded-full shadow-sm border border-gray-100"
+          aria-label="Blog"
+        >
+          <BookOpen size={18} />
+        </Link>
+        <Link 
+          to="/desktop" 
+          className="p-2.5 bg-white/80 backdrop-blur-sm text-gray-500 hover:text-blue-600 rounded-full shadow-sm border border-gray-100"
+          aria-label="Desktop"
+        >
+          <Monitor size={18} />
+        </Link>
       </div>
     </div>
   );
