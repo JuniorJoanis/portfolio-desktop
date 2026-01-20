@@ -149,7 +149,7 @@ const sections = [
     title: BIO.name,
     subtitle: 'CTO & Technical Architect',
     icon: null,
-    description: 'I help startups and scaleups design and scale SaaS products, backed by 12+ years of experience with industry leaders.',
+    description: 'I help startups and scaleups build and scale SaaS products, backed by 12+ years of experience with industry leaders.',
     blueprint: [
       // Board outer frame
       'M 20 25 L 220 25 L 220 155 L 20 155 Z',
@@ -323,15 +323,15 @@ function Consultancy() {
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
 
-  // Simple intro sequence
+  // Intro sequence with loading effect
   useEffect(() => {
-    // Show grid
-    const phase1 = setTimeout(() => setIntroPhase(1), 100);
-    // Show content
+    // Brief branding display
+    const phase1 = setTimeout(() => setIntroPhase(1), 400);
+    // Fade out loading, reveal grid and content
     const phase2 = setTimeout(() => {
       setIntroPhase(2);
       setHasLoaded(true);
-    }, 800);
+    }, 550);
     
     return () => {
       clearTimeout(phase1);
@@ -471,13 +471,154 @@ function Consultancy() {
       ref={containerRef}
       className="h-screen w-screen overflow-hidden bg-[#FAFAFA] text-[#1a1a1a] selection:bg-blue-100 cursor-default"
     >
-      {/* Isometric Grid Background */}
+      {/* Loading Effect - Radial Pulse & Floating Elements */}
       <div 
-        className="fixed inset-0 pointer-events-none transition-all duration-[1.5s] ease-out"
+        className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center transition-all duration-700 ease-out"
+        style={{ 
+          opacity: introPhase >= 2 ? 0 : 1,
+          visibility: hasLoaded ? 'hidden' : 'visible',
+          transform: introPhase >= 2 ? 'scale(1.02)' : 'scale(1)',
+        }}
+      >
+        {/* Central radial glow */}
+        <div 
+          className="absolute w-[600px] h-[600px] rounded-full"
+          style={{
+            background: 'radial-gradient(circle, rgba(37, 99, 235, 0.08) 0%, rgba(37, 99, 235, 0.03) 40%, transparent 70%)',
+            animation: 'pulse-glow 2s ease-in-out infinite',
+          }}
+        />
+        
+        {/* Secondary outer ring */}
+        <div 
+          className="absolute w-[800px] h-[800px] rounded-full"
+          style={{
+            background: 'radial-gradient(circle, transparent 50%, rgba(37, 99, 235, 0.02) 60%, transparent 70%)',
+            animation: 'pulse-ring 2.5s ease-in-out infinite',
+          }}
+        />
+        
+        {/* Floating geometric dots */}
+        {[...Array(8)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full"
+            style={{
+              width: `${3 + (i % 3) * 2}px`,
+              height: `${3 + (i % 3) * 2}px`,
+              backgroundColor: i % 2 === 0 ? 'rgba(37, 99, 235, 0.2)' : 'rgba(99, 102, 241, 0.15)',
+              left: `${50 + Math.cos((i * Math.PI) / 4) * (18 + i * 2.5)}%`,
+              top: `${50 + Math.sin((i * Math.PI) / 4) * (18 + i * 2.5)}%`,
+              animation: `float-dot ${4 + i * 0.3}s ease-in-out infinite`,
+              animationDelay: `${i * 0.15}s`,
+            }}
+          />
+        ))}
+        
+        {/* Center branding */}
+        <div 
+          className="relative z-10 flex flex-col items-center text-center px-6"
+          style={{ animation: 'fade-in-up 0.8s ease-out forwards' }}
+        >
+          {/* Decorative line above */}
+          <div 
+            className="w-12 h-[1px] mb-6 bg-gradient-to-r from-transparent via-blue-500/40 to-transparent"
+            style={{ animation: 'expand-line 1s ease-out forwards' }}
+          />
+          
+          {/* Company name - elegant stacked typography */}
+          <div className="space-y-1">
+            <div 
+              className="text-sm font-medium tracking-[0.3em] text-blue-600/50 uppercase"
+              style={{ animation: 'fade-pulse 2s ease-in-out infinite' }}
+            >
+              Joanis
+            </div>
+            <div 
+              className="text-2xl sm:text-3xl font-light tracking-wide text-slate-800/30"
+              style={{ 
+                fontFamily: "'Instrument Serif', serif",
+                animation: 'fade-pulse 2s ease-in-out infinite',
+                animationDelay: '0.2s'
+              }}
+            >
+              Innovative Ventures
+            </div>
+          </div>
+          
+          {/* Decorative line below */}
+          <div 
+            className="w-12 h-[1px] mt-6 bg-gradient-to-r from-transparent via-blue-500/40 to-transparent"
+            style={{ animation: 'expand-line 1s ease-out forwards', animationDelay: '0.2s' }}
+          />
+          
+          {/* Loading indicator */}
+          <div className="mt-8 flex items-center gap-1.5">
+            {[...Array(3)].map((_, i) => (
+              <div 
+                key={i}
+                className="w-1.5 h-1.5 rounded-full bg-blue-500/30"
+                style={{ 
+                  animation: 'loading-dot 1.2s ease-in-out infinite',
+                  animationDelay: `${i * 0.15}s`
+                }}
+              />
+            ))}
+          </div>
+        </div>
+        
+        {/* Subtle corner accents */}
+        <div className="absolute top-1/4 left-1/4 w-8 h-8 border-l border-t border-blue-400/10" style={{ animation: 'fade-pulse 3s ease-in-out infinite' }} />
+        <div className="absolute top-1/4 right-1/4 w-8 h-8 border-r border-t border-blue-400/10" style={{ animation: 'fade-pulse 3s ease-in-out infinite', animationDelay: '0.5s' }} />
+        <div className="absolute bottom-1/4 left-1/4 w-8 h-8 border-l border-b border-blue-400/10" style={{ animation: 'fade-pulse 3s ease-in-out infinite', animationDelay: '1s' }} />
+        <div className="absolute bottom-1/4 right-1/4 w-8 h-8 border-r border-b border-blue-400/10" style={{ animation: 'fade-pulse 3s ease-in-out infinite', animationDelay: '1.5s' }} />
+      </div>
+      
+      {/* CSS Keyframes */}
+      <style>{`
+        @keyframes pulse-glow {
+          0%, 100% { transform: scale(0.95); opacity: 1; }
+          50% { transform: scale(1.08); opacity: 0.6; }
+        }
+        @keyframes pulse-ring {
+          0%, 100% { transform: scale(0.9); opacity: 0.5; }
+          50% { transform: scale(1.15); opacity: 0.15; }
+        }
+        @keyframes float-dot {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          25% { transform: translate(6px, -10px) scale(1.1); }
+          50% { transform: translate(-4px, -15px) scale(0.9); }
+          75% { transform: translate(-10px, -5px) scale(1.05); }
+        }
+        @keyframes fade-pulse {
+          0%, 100% { opacity: 0.5; }
+          50% { opacity: 1; }
+        }
+        @keyframes fade-in-up {
+          0% { opacity: 0; transform: translateY(10px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes expand-line {
+          0% { width: 0; opacity: 0; }
+          100% { width: 3rem; opacity: 1; }
+        }
+        @keyframes loading-dot {
+          0%, 100% { opacity: 0.3; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.3); }
+        }
+        @keyframes cta-pulse {
+          0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5); }
+          50% { transform: scale(1.03); box-shadow: 0 0 20px 4px rgba(59, 130, 246, 0.3); }
+        }
+      `}</style>
+
+      {/* Isometric Grid Background - appears after loading */}
+      <div 
+        className="fixed inset-0 pointer-events-none transition-all duration-[1.2s] ease-out"
         style={{ 
           transform: gridTransform,
-          opacity: introPhase >= 1 ? 1 : 0,
-          scale: introPhase >= 1 ? '1' : '1.1',
+          opacity: introPhase >= 2 ? 1 : 0,
+          scale: introPhase >= 2 ? '1' : '1.05',
         }}
       >
         <svg className="w-full h-full opacity-[0.08]" xmlns="http://www.w3.org/2000/svg">
@@ -521,7 +662,10 @@ function Consultancy() {
             href={getSocialUrl('Calendar')}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-full transition-all text-sm"
+            className={`inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-full transition-all text-sm ${
+              activeSection === sections.length - 1 ? 'ring-4 ring-blue-400/50 ring-offset-2 ring-offset-[#FAFAFA]' : ''
+            }`}
+            style={activeSection === sections.length - 1 ? { animation: 'cta-pulse 2s ease-in-out infinite' } : {}}
           >
             <Calendar size={16} />
             <span className="hidden sm:inline">Schedule a call</span>
@@ -615,7 +759,9 @@ function Consultancy() {
 
       {/* Horizontal Canvas */}
       <div 
-        className="h-full transition-transform duration-[850ms] ease-[cubic-bezier(0.22,1,0.36,1)] flex"
+        className={`h-full transition-all duration-[850ms] ease-[cubic-bezier(0.22,1,0.36,1)] flex ${
+          hasLoaded ? 'opacity-100' : 'opacity-0'
+        }`}
         style={{ 
           width: `${sections.length * 100}vw`,
           transform: `translateX(-${activeSection * 100}vw)`,
@@ -841,7 +987,7 @@ function Consultancy() {
                           ))}
                         </div>
                         <div className="space-y-3">
-                          <p className="text-xs font-mono text-gray-400 uppercase tracking-widest">Platforms I built serve</p>
+                          <p className="text-xs font-mono text-gray-400 uppercase tracking-widest">Platforms I’ve built and maintain serve</p>
                           <div className="flex flex-wrap items-center gap-4">
                             {section.content.clients?.map((client) => (
                               <ClientLogo key={client.name} name={client.name} logo={client.logo} />
