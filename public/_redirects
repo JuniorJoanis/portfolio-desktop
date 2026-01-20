@@ -1,7 +1,0 @@
-# Handle SPA routing - all routes serve index.html
-# Blog posts: /blog, /blog/building-ai-copilot-accounts-receivable, etc.
-/blog/*   /index.html   200
-/blog     /index.html   200
-
-# Catch-all for any other client-side routes
-/*        /index.html   200
