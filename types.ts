@@ -32,6 +32,49 @@ export interface SkillCategory {
   skills: string[];
 }
 
+// Service Business Types
+export interface ServiceItem {
+  id: string;
+  title: string;
+  outcome: string;
+  description: string;
+  forWhom: string;
+  deliverables: string[];
+  icon: string; // icon name for lucide
+}
+
+export interface TestimonialItem {
+  id: number;
+  quote: string;
+  author: string;
+  role: string;
+  company: string;
+  avatar?: string;
+}
+
+export interface CaseStudyItem {
+  id: number;
+  title: string;
+  client: string;
+  challenge: string;
+  outcome: string;
+  metrics: string[];
+  tags: string[];
+}
+
+export interface ProcessStep {
+  id: number;
+  title: string;
+  description: string;
+}
+
+export interface PainPoint {
+  id: number;
+  title: string;
+  description: string;
+  icon: string;
+}
+
 // OS Types
 export type AppId = 'terminal' | 'resume' | 'projects' | 'contact' | 'browser' | 'game' | 'slack';
 

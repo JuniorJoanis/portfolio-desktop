@@ -8,7 +8,7 @@ import BlogPost from './components/blog/BlogPost';
 
 // Console log for developers
 console.log(
-  '👋 Hey there, curious developer! 🚀 Looking to build something amazing together?\n💼 CTO & Full-stack Engineer | 12+ years | 100k+ users\n📧 Let\'s connect! Check the Contact section or reach out directly.'
+  '👋 Hey there! Looking for a fintech engineer or AI builder?\n🚀 I help startups & SMEs ship faster: fintech systems, AI agents, MVPs.\n📧 Book a call: https://calendly.com/junior-joanis/intro-call'
 );
 
 const rootElement = document.getElementById('root');

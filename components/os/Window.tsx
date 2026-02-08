@@ -140,7 +140,7 @@ const Window: React.FC<WindowProps> = ({
   return (
     <div
       ref={windowRef}
-      className={`absolute flex flex-col bg-[#1e1e1e] border border-white/10 rounded-lg overflow-hidden window-shadow transition-all duration-75 ${
+      className={`absolute flex flex-col bg-[#151A22] border border-white/5 rounded-xl overflow-hidden window-shadow transition-all duration-100 ${
         isMaximized ? 'inset-0 w-full h-[calc(100%-48px)] rounded-none' : ''
       }`}
       style={{
@@ -157,7 +157,7 @@ const Window: React.FC<WindowProps> = ({
     >
       {/* Title Bar */}
       <div
-        className="flex items-center justify-between px-3 py-2 md:py-2 py-3 bg-[#2d2d2d] border-b border-black/20 select-none touch-none"
+        className="flex items-center justify-between px-3 py-2 md:py-2 py-3 bg-[#151A22] border-b border-white/5 select-none touch-none"
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
         onDoubleClick={!isMobile ? onMaximize : undefined}
@@ -193,8 +193,8 @@ const Window: React.FC<WindowProps> = ({
           </div>
           
           {/* Title */}
-          <div className="flex items-center gap-2 text-xs md:text-xs font-medium text-gray-400 min-w-0 flex-1">
-             <Icon size={14} className="flex-shrink-0" />
+          <div className="flex items-center gap-2 text-xs md:text-xs font-medium text-slate-400 min-w-0 flex-1">
+             <Icon size={14} className="flex-shrink-0 text-slate-300" />
              <span className="truncate">{title}</span>
           </div>
         </div>
@@ -202,7 +202,7 @@ const Window: React.FC<WindowProps> = ({
 
       {/* Content */}
       <div 
-        className="flex-1 overflow-auto bg-[#1e1e1e] text-gray-200 relative"
+        className="flex-1 overflow-auto bg-[#151A22] text-slate-200 relative"
         onMouseDown={handleContentMouseDown}
         onTouchStart={handleContentTouchStart}
       >

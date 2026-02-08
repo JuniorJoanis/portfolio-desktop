@@ -238,11 +238,13 @@ function App() {
   };
 
   return (
-    <div className="h-full w-full bg-[#111827] text-slate-100 overflow-hidden relative selection:bg-blue-500/30 font-sans">
-      
-      {/* Dynamic Background */}
-      <div className="absolute inset-0 z-0 bg-cover bg-center opacity-60 pointer-events-none" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop)' }}></div>
-      <div className="absolute inset-0 z-0 bg-gradient-to-t from-[#111827] via-[#111827]/80 to-transparent pointer-events-none"></div>
+    <div className="h-full w-full bg-[#0F1217] text-slate-100 overflow-hidden relative selection:bg-blue-500/20 font-sans">
+      {/* Subtle ambient background */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(148,163,184,0.10),transparent_55%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_10%,rgba(125,211,252,0.08),transparent_50%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_90%,rgba(59,130,246,0.06),transparent_55%)]" />
+      </div>
 
       {/* Desktop Icons - Hidden on mobile, shown on desktop */}
       <div className="hidden md:block absolute top-8 left-8 flex flex-col gap-8 z-0">
@@ -315,12 +317,12 @@ function App() {
 const DesktopIcon = ({ icon: Icon, label, onClick }: { icon: any, label: string, onClick: () => void }) => (
   <button 
     onClick={onClick}
-    className="group flex flex-col items-center gap-2 w-20 text-center hover:bg-white/10 p-2 rounded-xl transition-all duration-200 cursor-pointer active:scale-95"
+    className="group flex flex-col items-center gap-2 w-20 text-center rounded-lg px-2 py-2 text-slate-300 hover:text-slate-100 hover:bg-white/5 transition-colors duration-200 cursor-pointer"
   >
-    <div className="w-14 h-14 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl shadow-xl flex items-center justify-center group-hover:scale-105 transition-transform group-hover:bg-white/20">
-      <Icon className="text-white drop-shadow-md" size={32} strokeWidth={1.5} />
+    <div className="w-12 h-12 border border-white/10 bg-white/5 rounded-xl flex items-center justify-center">
+      <Icon className="text-slate-200" size={28} strokeWidth={1.5} />
     </div>
-    <span className="text-xs font-medium text-white drop-shadow-lg shadow-black tracking-wide">{label}</span>
+    <span className="text-xs font-medium tracking-wide">{label}</span>
   </button>
 );
 

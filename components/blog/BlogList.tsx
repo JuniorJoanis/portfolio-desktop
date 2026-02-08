@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useMemo } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { Calendar, Clock, ArrowRight, Sparkles } from 'lucide-react';
 import BlogLayout from './BlogLayout';
 import { BLOG_POSTS } from '../../blogData';
@@ -13,6 +13,29 @@ import {
 import { BIO } from '../../constants';
 
 const BlogList: React.FC = () => {
+  const location = useLocation();
+  const tagFilter = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    const tag = params.get('tag');
+    return tag ? tag.trim() : null;
+  }, [location.search]);
+
+  const { visiblePosts, hasMatches } = useMemo(() => {
+    if (!tagFilter) {
+      return { visiblePosts: BLOG_POSTS, hasMatches: true };
+    }
+
+    const normalizedFilter = tagFilter.toLowerCase();
+    const filtered = BLOG_POSTS.filter((post) =>
+      post.tags.some((tag) => tag.toLowerCase() === normalizedFilter)
+    );
+
+    return {
+      visiblePosts: filtered.length > 0 ? filtered : BLOG_POSTS,
+      hasMatches: filtered.length > 0,
+    };
+  }, [tagFilter]);
+
   // SEO: Update meta tags and structured data
   useEffect(() => {
     updateSEOMeta({
@@ -53,12 +76,34 @@ const BlogList: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {tagFilter && (
+        <section className="pb-6">
+          <div className="max-w-4xl mx-auto px-6">
+            <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+              <span className="px-3 py-1 rounded-full bg-slate-800/50 text-slate-300 border border-slate-700/50">
+                Topic: {tagFilter}
+              </span>
+              {!hasMatches && (
+                <span className="text-slate-500">
+                  No posts yet. Showing all articles.
+                </span>
+              )}
+              {hasMatches && (
+                <Link to="/blog" className="text-teal-400 hover:text-teal-300 transition-colors">
+                  Clear filter
+                </Link>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
       
       {/* Posts Grid - with semantic markup */}
       <section className="pb-20" aria-label="Blog posts">
         <div className="max-w-4xl mx-auto px-6">
           {/* Featured Post */}
-          {BLOG_POSTS.filter(p => p.featured).map(post => (
+          {visiblePosts.filter(p => p.featured).map(post => (
             <Link 
               key={post.slug}
               to={`/blog/${post.slug}`}
@@ -144,7 +189,7 @@ const BlogList: React.FC = () => {
           
           {/* Other Posts */}
           <div className="space-y-1">
-            {BLOG_POSTS.filter(p => !p.featured).map(post => (
+            {visiblePosts.filter(p => !p.featured).map(post => (
               <Link 
                 key={post.slug}
                 to={`/blog/${post.slug}`}
