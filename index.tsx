@@ -5,6 +5,7 @@ import App from './App';
 import Consultancy from './components/Consultancy';
 import BlogList from './components/blog/BlogList';
 import BlogPost from './components/blog/BlogPost';
+import ScrollToTop from './components/ScrollToTop';
 
 // Console log for developers
 console.log(
@@ -20,6 +21,7 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <BrowserRouter>
+      <ScrollToTop />
       <Routes>
         <Route path="/" element={<Consultancy />} />
         <Route path="/desktop" element={<App />} />
