@@ -122,7 +122,7 @@ const BlogPost: React.FC = () => {
           {/* Breadcrumb Navigation - SEO friendly */}
           <nav aria-label="Breadcrumb" className="mb-8">
             <ol 
-              className="flex items-center gap-2 text-sm text-slate-500"
+              className="flex items-center gap-2 text-sm text-stone-500"
               itemScope 
               itemType="https://schema.org/BreadcrumbList"
             >
@@ -134,13 +134,13 @@ const BlogPost: React.FC = () => {
                 <Link 
                   to="/" 
                   itemProp="item"
-                  className="hover:text-teal-400 transition-colors"
+                  className="hover:text-stone-900 transition-colors"
                 >
                   <span itemProp="name">Home</span>
                 </Link>
                 <meta itemProp="position" content="1" />
               </li>
-              <li className="text-slate-600">/</li>
+              <li className="text-stone-300">/</li>
               <li 
                 itemProp="itemListElement" 
                 itemScope 
@@ -149,18 +149,18 @@ const BlogPost: React.FC = () => {
                 <Link 
                   to="/blog" 
                   itemProp="item"
-                  className="hover:text-teal-400 transition-colors"
+                  className="hover:text-stone-900 transition-colors"
                 >
                   <span itemProp="name">Blog</span>
                 </Link>
                 <meta itemProp="position" content="2" />
               </li>
-              <li className="text-slate-600">/</li>
+              <li className="text-stone-300">/</li>
               <li 
                 itemProp="itemListElement" 
                 itemScope 
                 itemType="https://schema.org/ListItem"
-                className="text-slate-400 truncate max-w-[200px]"
+                className="text-stone-600 truncate max-w-[200px]"
               >
                 <span itemProp="name">{post.title}</span>
                 <meta itemProp="position" content="3" />
@@ -169,7 +169,7 @@ const BlogPost: React.FC = () => {
           </nav>
           
           {/* Meta - with machine-readable time */}
-          <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500 mb-6">
+          <div className="flex flex-wrap items-center gap-4 text-sm text-stone-500 mb-6">
             <time 
               dateTime={parseDateToISO(post.date)}
               className="flex items-center gap-1.5"
@@ -186,7 +186,7 @@ const BlogPost: React.FC = () => {
           
           {/* Title - h1 for SEO */}
           <h1 
-            className="text-3xl md:text-5xl font-bold text-slate-100 leading-tight mb-6"
+            className="text-3xl md:text-5xl font-bold text-stone-900 leading-tight mb-6"
             itemProp="name"
           >
             {post.title}
@@ -194,7 +194,7 @@ const BlogPost: React.FC = () => {
           
           {/* Excerpt/Summary */}
           <p 
-            className="text-xl text-slate-400 leading-relaxed mb-8"
+            className="text-xl text-stone-600 leading-relaxed mb-8"
             itemProp="abstract"
           >
             {post.excerpt}
@@ -209,7 +209,7 @@ const BlogPost: React.FC = () => {
             {post.tags.map(tag => (
               <span 
                 key={tag}
-                className="px-3 py-1.5 rounded-full text-xs font-mono bg-teal-500/10 text-teal-400 border border-teal-500/20"
+                className="px-3 py-1.5 rounded-full text-xs font-mono bg-stone-100 text-stone-700 border border-stone-200"
               >
                 {tag}
               </span>
@@ -217,7 +217,7 @@ const BlogPost: React.FC = () => {
           </div>
           
           {/* Author & Actions */}
-          <div className="flex items-center justify-between py-6 border-y border-slate-700/50">
+          <div className="flex items-center justify-between py-6 border-y border-stone-200">
             <div 
               className="flex items-center gap-4"
               itemProp="author"
@@ -230,15 +230,15 @@ const BlogPost: React.FC = () => {
                 className="w-12 h-12 rounded-full object-cover"
               />
               <div>
-                <div className="font-medium text-slate-100" itemProp="name">{BIO.name}</div>
-                <div className="text-sm text-slate-500" itemProp="jobTitle">CTO & Full-stack Engineer</div>
+                <div className="font-medium text-stone-900" itemProp="name">{BIO.name}</div>
+                <div className="text-sm text-stone-500" itemProp="jobTitle">CTO & Full-stack Engineer</div>
                 <link itemProp="url" href={SITE_URL} />
               </div>
             </div>
             <div className="flex items-center gap-2">
               <button 
                 onClick={shareOnTwitter}
-                className="p-2.5 rounded-lg bg-slate-800/50 text-slate-400 hover:text-teal-400 hover:bg-slate-800 transition-all"
+                className="p-2.5 rounded-lg bg-stone-100 text-stone-500 hover:text-stone-900 hover:bg-stone-200 transition-all"
                 title="Share on X"
                 aria-label="Share this article on X (Twitter)"
               >
@@ -252,19 +252,19 @@ const BlogPost: React.FC = () => {
         <div className="max-w-3xl mx-auto px-6 py-12">
           <div 
             ref={contentRef}
-            className="prose prose-invert prose-lg max-w-none
-              prose-headings:font-bold prose-headings:text-slate-100 prose-headings:tracking-tight
-              prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-6 prose-h2:pb-3 prose-h2:border-b prose-h2:border-slate-700/50
+            className="prose prose-lg max-w-none
+              prose-headings:font-bold prose-headings:text-stone-900 prose-headings:tracking-tight
+              prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-6 prose-h2:pb-3 prose-h2:border-b prose-h2:border-stone-200
               prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-4
-              prose-p:text-slate-400 prose-p:leading-relaxed
-              prose-a:text-teal-400 prose-a:no-underline hover:prose-a:underline
-              prose-strong:text-slate-200 prose-strong:font-semibold
-              prose-code:text-teal-400 prose-code:bg-slate-800/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-mono prose-code:text-sm prose-code:before:content-none prose-code:after:content-none
-              prose-pre:bg-[#0c1222] prose-pre:border prose-pre:border-slate-700/50 prose-pre:rounded-xl prose-pre:overflow-x-auto
-              prose-ul:text-slate-400 prose-ol:text-slate-400
-              prose-li:marker:text-teal-500
-              prose-blockquote:border-l-teal-500 prose-blockquote:bg-slate-800/20 prose-blockquote:py-2 prose-blockquote:px-6 prose-blockquote:rounded-r-lg prose-blockquote:not-italic
-              prose-hr:border-slate-700/50
+              prose-p:text-stone-600 prose-p:leading-relaxed
+              prose-a:text-stone-900 prose-a:no-underline hover:prose-a:underline
+              prose-strong:text-stone-800 prose-strong:font-semibold
+              prose-code:text-stone-800 prose-code:bg-stone-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-mono prose-code:text-sm prose-code:before:content-none prose-code:after:content-none
+              prose-pre:bg-[#1C1917] prose-pre:border prose-pre:border-stone-200 prose-pre:rounded-xl prose-pre:overflow-x-auto
+              prose-ul:text-stone-600 prose-ol:text-stone-600
+              prose-li:marker:text-stone-400
+              prose-blockquote:border-l-stone-400 prose-blockquote:bg-stone-100/60 prose-blockquote:py-2 prose-blockquote:px-6 prose-blockquote:rounded-r-lg prose-blockquote:not-italic
+              prose-hr:border-stone-200
             "
             itemProp="articleBody"
             dangerouslySetInnerHTML={{ __html: post.content }}
@@ -274,8 +274,8 @@ const BlogPost: React.FC = () => {
         {/* Resources Section - with citation markup */}
         {post.resources && post.resources.length > 0 && (
           <aside className="max-w-3xl mx-auto px-6 pb-12">
-            <div className="rounded-xl border border-slate-700/50 bg-slate-800/20 p-6">
-              <h2 className="text-lg font-semibold text-slate-100 mb-4">Resources & References</h2>
+            <div className="rounded-xl border border-stone-200 bg-stone-100/60 p-6">
+              <h2 className="text-lg font-semibold text-stone-900 mb-4">Resources & References</h2>
               <ul className="space-y-3" role="list">
                 {post.resources.map((resource, i) => (
                   <li key={i} itemProp="citation" itemScope itemType="https://schema.org/WebPage">
@@ -283,7 +283,7 @@ const BlogPost: React.FC = () => {
                       href={resource.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-teal-400 hover:underline"
+                      className="flex items-center gap-2 text-stone-900 underline decoration-stone-300 hover:decoration-stone-900"
                       itemProp="url"
                     >
                       <ExternalLink size={14} aria-hidden="true" />
@@ -298,9 +298,9 @@ const BlogPost: React.FC = () => {
         
         {/* Post Footer CTA */}
         <footer className="max-w-3xl mx-auto px-6">
-          <div className="rounded-xl border border-slate-700/50 bg-gradient-to-br from-teal-500/5 to-transparent p-8 text-center">
-            <h2 className="text-xl font-semibold text-slate-100 mb-2">Enjoyed this article?</h2>
-            <p className="text-slate-400 mb-6">
+          <div className="rounded-xl border border-stone-200 bg-gradient-to-br from-stone-200/40 to-transparent p-8 text-center">
+            <h2 className="text-xl font-semibold text-stone-900 mb-2">Enjoyed this article?</h2>
+            <p className="text-stone-600 mb-6">
               Let's connect! I write about engineering leadership, architecture decisions, and building products at scale.
             </p>
             <div className="flex items-center justify-center gap-4">
@@ -308,7 +308,7 @@ const BlogPost: React.FC = () => {
                 href={SOCIALS.find(s => s.platform === 'Twitter/X')?.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-5 py-2.5 rounded-lg bg-teal-500 text-slate-900 font-medium hover:bg-teal-400 transition-colors"
+                className="px-5 py-2.5 rounded-lg bg-stone-900 text-white font-medium hover:bg-stone-800 transition-colors"
               >
                 Follow on X
               </a>
@@ -316,7 +316,7 @@ const BlogPost: React.FC = () => {
                 href={SOCIALS.find(s => s.platform === 'LinkedIn')?.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-5 py-2.5 rounded-lg bg-slate-800 text-slate-100 font-medium hover:bg-slate-700 transition-colors"
+                className="px-5 py-2.5 rounded-lg bg-white border border-stone-300 text-stone-900 font-medium hover:bg-stone-100 transition-colors"
               >
                 Connect on LinkedIn
               </a>

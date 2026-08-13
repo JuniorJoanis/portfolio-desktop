@@ -4,7 +4,7 @@ import { getEmailMailtoLink } from './utils/email';
 export const BIO = {
   name: "Junior Joanis",
   tagline: "I help founders and CTOs ship MVPs, fix legacy, and deliver production AI, fast.",
-  avatarUrl: "https://github.com/JuniorJoanis.png",
+  avatarUrl: "/junior-joanis.jpg",
   shortBio: "CTO and hands-on engineer with 12+ years shipping real products. I build MVPs, stabilize legacy codebases, and integrate AI into workflows in a way that actually reduces cycle time, not adds complexity.",
   fullBio: `I've spent over a decade building and scaling software products, often under real constraints: legacy systems, enterprise clients, tight timelines, and high stakes.
 

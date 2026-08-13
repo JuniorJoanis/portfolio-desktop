@@ -89,7 +89,7 @@ function Navbar() {
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
       scrolled
-        ? 'bg-white/85 backdrop-blur-md border-b border-slate-200/70'
+        ? 'bg-white/85 backdrop-blur-md border-b border-stone-200/70'
         : 'bg-transparent'
     }`}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -97,9 +97,9 @@ function Navbar() {
           {/* Logo */}
           <button
             onClick={() => scrollToSection('#hero')}
-            className="text-lg font-semibold tracking-tight text-slate-900 hover:text-slate-700 transition-colors"
+            className="text-lg font-semibold tracking-tight text-stone-900 hover:text-stone-700 transition-colors"
           >
-            JJ<span className="text-slate-400">.</span>
+            JJ<span className="text-stone-400">.</span>
           </button>
 
           {/* Desktop nav */}
@@ -108,7 +108,7 @@ function Navbar() {
               <button
                 key={link.href}
                 onClick={() => scrollToSection(link.href)}
-                className="text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors"
+                className="text-sm font-medium text-stone-500 hover:text-stone-900 transition-colors"
               >
                 {link.label}
               </button>
@@ -121,7 +121,7 @@ function Navbar() {
               href={HERO.ctaUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-medium px-4 py-2.5 rounded-full transition-colors text-sm"
+              className="inline-flex items-center gap-2 bg-stone-900 hover:bg-stone-800 text-white font-medium px-4 py-2.5 rounded-full transition-colors text-sm"
             >
               <FlaticonIcon name="fi-rr-calendar" size={16} />
               <span className="hidden sm:inline">Book a Call</span>
@@ -131,7 +131,7 @@ function Navbar() {
             {/* Mobile menu button */}
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="md:hidden p-2 text-slate-500 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition-colors"
+              className="md:hidden p-2 text-stone-500 hover:text-stone-900 rounded-lg hover:bg-stone-100 transition-colors"
               aria-label="Toggle menu"
             >
               {mobileOpen ? (
@@ -146,22 +146,22 @@ function Navbar() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="md:hidden bg-white border-t border-slate-200">
+        <div className="md:hidden bg-white border-t border-stone-200">
           <div className="px-4 py-4 space-y-1">
             {NAV_LINKS.map((link) => (
               <button
                 key={link.href}
                 onClick={() => { scrollToSection(link.href); setMobileOpen(false); }}
-                className="block w-full text-left px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-colors"
+                className="block w-full text-left px-4 py-3 text-sm font-medium text-stone-600 hover:text-stone-900 hover:bg-stone-50 rounded-lg transition-colors"
               >
                 {link.label}
               </button>
             ))}
             <div className="pt-3 flex items-center gap-3 px-4">
-              <Link to="/blog" className="text-sm text-slate-500 hover:text-slate-900 flex items-center gap-1">
+              <Link to="/blog" className="text-sm text-stone-500 hover:text-stone-900 flex items-center gap-1">
                 <FlaticonIcon name="fi-rr-book-open-reader" size={14} /> Blog
               </Link>
-              <Link to="/desktop" className="text-sm text-slate-500 hover:text-slate-900 flex items-center gap-1">
+              <Link to="/desktop" className="text-sm text-stone-500 hover:text-stone-900 flex items-center gap-1">
                 <FlaticonIcon name="fi-rr-monitor" size={14} /> Desktop
               </Link>
             </div>
@@ -181,52 +181,101 @@ function HeroSection() {
     <section id="hero" className="relative min-h-screen flex items-center pt-20 pb-16">
 
       <div ref={ref} className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-        <div className="max-w-3xl">
-          {/* Badge */}
-          <div className={`inline-flex items-center gap-2 bg-slate-100 border border-slate-200 text-slate-700 px-4 py-1.5 rounded-full text-sm font-medium mb-8 transition-all duration-700 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-            <FlaticonIcon name="fi-rr-bolt" size={14} />
-            MVP Delivery &middot; Legacy Rescue &middot; Production AI
+        <div className="grid lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_400px] gap-12 lg:gap-14 items-center">
+          {/* Left: copy */}
+          <div className="max-w-2xl">
+            {/* Badge */}
+            <div className={`inline-flex items-center gap-2 bg-stone-100 border border-stone-200 text-stone-700 px-4 py-1.5 rounded-full text-sm font-medium mb-8 transition-all duration-700 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+              <FlaticonIcon name="fi-rr-bolt" size={14} />
+              MVP Delivery &middot; Legacy Rescue &middot; Production AI
+            </div>
+
+            {/* Headline */}
+            <h1 className={`text-4xl sm:text-5xl xl:text-6xl font-serif font-semibold tracking-tight text-stone-900 leading-[1.08] mb-6 transition-all duration-700 delay-100 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+              {HERO.headline}
+            </h1>
+
+            {/* Subheadline */}
+            <p className={`text-lg sm:text-xl text-stone-600 leading-relaxed mb-10 max-w-2xl transition-all duration-700 delay-200 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+              {HERO.subheadline}
+            </p>
+
+            {/* CTAs */}
+            <div className={`flex flex-col sm:flex-row items-start sm:items-center gap-4 transition-all duration-700 delay-300 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+              <a
+                href={HERO.ctaUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 bg-stone-900 hover:bg-stone-800 text-white font-semibold px-6 py-3.5 rounded-full transition-colors text-base"
+              >
+                <FlaticonIcon name="fi-rr-calendar" size={18} />
+                {HERO.primaryCta}
+              </a>
+              <button
+                onClick={() => scrollToSection('#services')}
+                className="inline-flex items-center gap-2 text-stone-600 hover:text-stone-900 font-medium px-2 py-3 transition-colors text-base group"
+              >
+                {HERO.secondaryCta}
+                <FlaticonIcon name="fi-rr-arrow-right" size={18} className="group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
           </div>
 
-          {/* Headline */}
-          <h1 className={`text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-serif font-semibold tracking-tight text-slate-900 leading-[1.08] mb-6 transition-all duration-700 delay-100 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-            {HERO.headline}
-          </h1>
+          {/* Right: portrait */}
+          <div
+            className={`relative w-full max-w-[300px] sm:max-w-[340px] lg:max-w-none mx-auto lg:mx-0 transition-all duration-1000 delay-[350ms] ${
+              inView ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-6 scale-[0.97]'
+            }`}
+          >
+            {/* Ambient glow */}
+            <div
+              aria-hidden="true"
+              className="absolute -inset-8 bg-[radial-gradient(circle_at_50%_45%,rgba(168,162,158,0.16),transparent_70%)] blur-2xl"
+            />
 
-          {/* Subheadline */}
-          <p className={`text-lg sm:text-xl text-slate-600 leading-relaxed mb-10 max-w-2xl transition-all duration-700 delay-200 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-            {HERO.subheadline}
-          </p>
+            {/* Offset frame */}
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 translate-x-3 translate-y-3 sm:translate-x-4 sm:translate-y-4 rounded-[2rem] border border-stone-300/70"
+            />
 
-          {/* CTAs */}
-          <div className={`flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-16 transition-all duration-700 delay-300 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-            <a
-              href={HERO.ctaUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold px-6 py-3.5 rounded-full transition-colors text-base"
-            >
-              <FlaticonIcon name="fi-rr-calendar" size={18} />
-              {HERO.primaryCta}
-            </a>
-            <button
-              onClick={() => scrollToSection('#services')}
-              className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 font-medium px-2 py-3 transition-colors text-base group"
-            >
-              {HERO.secondaryCta}
-              <FlaticonIcon name="fi-rr-arrow-right" size={18} className="group-hover:translate-x-1 transition-transform" />
-            </button>
-          </div>
+            {/* Photo */}
+            <div className="relative rounded-[2rem] overflow-hidden bg-stone-100 ring-1 ring-stone-900/[0.06] shadow-[0_28px_60px_-24px_rgba(28,25,23,0.35)]">
+              <img
+                src="/junior-joanis.jpg"
+                alt={`${BIO.name}, ${BIO.shortBio.split('.')[0]}`}
+                width={500}
+                height={500}
+                className="w-full aspect-square object-cover"
+                decoding="async"
+                fetchPriority="high"
+              />
+            </div>
 
-          {/* Stats */}
-          <div className={`flex flex-wrap gap-8 sm:gap-12 transition-all duration-700 delay-[400ms] ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-            {HERO.stats.map((stat) => (
-              <div key={stat.label}>
-                <div className="text-3xl sm:text-4xl font-semibold text-slate-900">{stat.value}</div>
-                <div className="text-sm text-slate-500 mt-1">{stat.label}</div>
+            {/* Floating name card */}
+            <div className="absolute -bottom-5 -left-3 sm:-left-5 bg-white/90 backdrop-blur-md border border-stone-200/80 rounded-2xl pl-4 pr-5 py-3 shadow-lg shadow-stone-900/5">
+              <div className="flex items-center gap-3">
+                <span className="relative flex h-2 w-2 flex-shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-60" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-stone-900 leading-tight">{BIO.name}</p>
+                  <p className="text-xs text-stone-500 leading-tight mt-0.5">CTO &amp; Hands-on Engineer &middot; Amsterdam</p>
+                </div>
               </div>
-            ))}
+            </div>
           </div>
+        </div>
+
+        {/* Stats */}
+        <div className={`mt-20 lg:mt-24 pt-8 border-t border-stone-200/80 flex flex-wrap gap-8 sm:gap-12 transition-all duration-700 delay-[400ms] ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+          {HERO.stats.map((stat) => (
+            <div key={stat.label}>
+              <div className="text-3xl sm:text-4xl font-semibold text-stone-900">{stat.value}</div>
+              <div className="text-sm text-stone-500 mt-1">{stat.label}</div>
+            </div>
+          ))}
         </div>
       </div>
     </section>
@@ -242,7 +291,7 @@ function SocialProofSection() {
     <section className="py-10 sm:py-12">
       <div ref={ref} className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className={`text-center transition-all duration-700 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-          <p className="text-xs sm:text-sm font-semibold text-slate-400 uppercase tracking-[0.25em] mb-6">
+          <p className="text-xs sm:text-sm font-semibold text-stone-400 uppercase tracking-[0.25em] mb-6">
             Helping Teams Win Enterprise Clients Like
           </p>
           <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10">
@@ -270,15 +319,15 @@ function ProblemSection() {
   const { ref, inView } = useInView();
 
   return (
-    <section className="py-20 sm:py-28 bg-[#F6F7F9]">
+    <section className="py-20 sm:py-28 bg-[#FAFAF9]">
       <div ref={ref} className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <div className={`max-w-2xl mb-16 transition-all duration-700 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
-          <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">The Problem</p>
-          <h2 className="text-3xl sm:text-4xl font-serif font-semibold text-slate-900 tracking-tight mb-4">
+          <p className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-3">The Problem</p>
+          <h2 className="text-3xl sm:text-4xl font-serif font-semibold text-stone-900 tracking-tight mb-4">
             Sound Familiar?
           </h2>
-          <p className="text-lg text-slate-600 leading-relaxed">
+          <p className="text-lg text-stone-600 leading-relaxed">
             If you're a founder or CTO dealing with any of these, you're losing momentum and burning expensive time.
           </p>
         </div>
@@ -290,16 +339,16 @@ function ProblemSection() {
             return (
               <div
                 key={pain.id}
-                className={`bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 hover:border-slate-300/80 hover:shadow-md transition-all duration-500 ${
+                className={`bg-white rounded-2xl p-6 sm:p-8 border border-stone-200/80 hover:border-stone-300/80 hover:shadow-md transition-all duration-500 ${
                   inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
                 }`}
                 style={{ transitionDelay: inView ? `${index * 100 + 200}ms` : '0ms' }}
               >
-                <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center mb-4">
-                  <FlaticonIcon name={iconClass} size={22} className="text-slate-600" />
+                <div className="w-12 h-12 bg-stone-100 rounded-xl flex items-center justify-center mb-4">
+                  <FlaticonIcon name={iconClass} size={22} className="text-stone-600" />
                 </div>
-                <h3 className="text-lg font-semibold text-slate-900 mb-2">{pain.title}</h3>
-                <p className="text-slate-600 leading-relaxed">{pain.description}</p>
+                <h3 className="text-lg font-semibold text-stone-900 mb-2">{pain.title}</h3>
+                <p className="text-stone-600 leading-relaxed">{pain.description}</p>
               </div>
             );
           })}
@@ -319,11 +368,11 @@ function SolutionSection() {
       <div ref={ref} className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <div className={`max-w-2xl mb-16 transition-all duration-700 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
-          <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">The Solution</p>
-          <h2 className="text-3xl sm:text-4xl font-serif font-semibold text-slate-900 tracking-tight mb-4">
+          <p className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-3">The Solution</p>
+          <h2 className="text-3xl sm:text-4xl font-serif font-semibold text-stone-900 tracking-tight mb-4">
             {SOLUTION.title}
           </h2>
-          <p className="text-lg text-slate-600 leading-relaxed">
+          <p className="text-lg text-stone-600 leading-relaxed">
             {SOLUTION.subtitle}
           </p>
         </div>
@@ -339,12 +388,12 @@ function SolutionSection() {
               style={{ transitionDelay: inView ? `${index * 150 + 200}ms` : '0ms' }}
             >
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-8 h-8 bg-slate-900 text-white rounded-lg flex items-center justify-center text-sm font-semibold">
+                <div className="w-8 h-8 bg-stone-900 text-white rounded-lg flex items-center justify-center text-sm font-semibold">
                   {index + 1}
                 </div>
-                <h3 className="text-xl font-semibold text-slate-900">{point.title}</h3>
+                <h3 className="text-xl font-semibold text-stone-900">{point.title}</h3>
               </div>
-              <p className="text-slate-600 leading-relaxed pl-11">{point.description}</p>
+              <p className="text-stone-600 leading-relaxed pl-11">{point.description}</p>
             </div>
           ))}
         </div>
@@ -355,7 +404,7 @@ function SolutionSection() {
             href={HERO.ctaUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold px-6 py-3 rounded-full transition-colors text-sm"
+            className="inline-flex items-center gap-2 bg-stone-900 hover:bg-stone-800 text-white font-semibold px-6 py-3 rounded-full transition-colors text-sm"
           >
             <FlaticonIcon name="fi-rr-calendar" size={16} />
             Let's Talk About Your Project
@@ -373,15 +422,15 @@ function ServicesSection() {
   const [expandedService, setExpandedService] = useState<string | null>(null);
 
   return (
-    <section id="services" className="py-20 sm:py-28 bg-[#F6F7F9]">
+    <section id="services" className="py-20 sm:py-28 bg-[#FAFAF9]">
       <div ref={ref} className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <div className={`max-w-2xl mb-16 transition-all duration-700 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
-          <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Services</p>
-          <h2 className="text-3xl sm:text-4xl font-serif font-semibold text-slate-900 tracking-tight mb-4">
+          <p className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-3">Services</p>
+          <h2 className="text-3xl sm:text-4xl font-serif font-semibold text-stone-900 tracking-tight mb-4">
             What I Build For You
           </h2>
-          <p className="text-lg text-slate-600 leading-relaxed">
+          <p className="text-lg text-stone-600 leading-relaxed">
             Each engagement is scoped around your business outcomes, not a tech stack wishlist.
           </p>
         </div>
@@ -395,34 +444,34 @@ function ServicesSection() {
             return (
               <div
                 key={service.id}
-                className={`bg-white rounded-2xl border border-slate-200/80 hover:border-slate-300/80 transition-all duration-500 overflow-hidden ${
-                  isExpanded ? 'shadow-md border-slate-300/80' : 'hover:shadow-sm'
+                className={`bg-white rounded-2xl border border-stone-200/80 hover:border-stone-300/80 transition-all duration-500 overflow-hidden ${
+                  isExpanded ? 'shadow-md border-stone-300/80' : 'hover:shadow-sm'
                 } ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
                 style={{ transitionDelay: inView ? `${index * 100 + 200}ms` : '0ms' }}
               >
                 <div className="p-6 sm:p-8">
                   <div className="flex items-start gap-4 mb-4">
-                    <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <FlaticonIcon name={iconClass} size={22} className="text-slate-700" />
+                    <div className="w-12 h-12 bg-stone-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <FlaticonIcon name={iconClass} size={22} className="text-stone-700" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-xl font-semibold text-slate-900 mb-1">{service.title}</h3>
-                      <p className="text-slate-600 font-semibold text-sm">{service.outcome}</p>
+                      <h3 className="text-xl font-semibold text-stone-900 mb-1">{service.title}</h3>
+                      <p className="text-stone-600 font-semibold text-sm">{service.outcome}</p>
                     </div>
                   </div>
 
-                  <p className="text-slate-600 leading-relaxed mb-4">{service.description}</p>
+                  <p className="text-stone-600 leading-relaxed mb-4">{service.description}</p>
 
-                  <div className="bg-slate-50 rounded-lg px-4 py-3 mb-4">
-                    <p className="text-sm text-slate-600">
-                      <span className="font-semibold text-slate-700">Who it's for: </span>
+                  <div className="bg-stone-50 rounded-lg px-4 py-3 mb-4">
+                    <p className="text-sm text-stone-600">
+                      <span className="font-semibold text-stone-700">Who it's for: </span>
                       {service.forWhom}
                     </p>
                   </div>
 
                   <button
                     onClick={() => setExpandedService(isExpanded ? null : service.id)}
-                    className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-700 hover:text-stone-900 transition-colors"
                   >
                     {isExpanded ? 'Hide' : 'See'} deliverables
                     <FlaticonIcon name="fi-rr-angle-right" size={14} className={`transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
@@ -434,7 +483,7 @@ function ServicesSection() {
                       {service.deliverables.map((d, i) => (
                         <li key={i} className="flex items-start gap-2.5">
                           <FlaticonIcon name="fi-rr-badge-check" size={16} className="text-emerald-600 mt-0.5 flex-shrink-0" />
-                          <span className="text-sm text-slate-600">{d}</span>
+                          <span className="text-sm text-stone-600">{d}</span>
                         </li>
                       ))}
                     </ul>
@@ -447,12 +496,12 @@ function ServicesSection() {
 
         {/* Bottom CTA */}
         <div className={`mt-12 text-center transition-all duration-700 delay-700 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
-          <p className="text-slate-600 mb-4">Not sure which service fits? Let's figure it out together.</p>
+          <p className="text-stone-600 mb-4">Not sure which service fits? Let's figure it out together.</p>
           <a
             href={HERO.ctaUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold px-6 py-3 rounded-full transition-colors text-sm"
+            className="inline-flex items-center gap-2 bg-stone-900 hover:bg-stone-800 text-white font-semibold px-6 py-3 rounded-full transition-colors text-sm"
           >
             <FlaticonIcon name="fi-rr-calendar" size={16} />
             Book a Free Discovery Call
@@ -473,11 +522,11 @@ function ProcessSection() {
       <div ref={ref} className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <div className={`text-center max-w-2xl mx-auto mb-16 transition-all duration-700 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
-          <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">How It Works</p>
-          <h2 className="text-3xl sm:text-4xl font-serif font-semibold text-slate-900 tracking-tight mb-4">
+          <p className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-3">How It Works</p>
+          <h2 className="text-3xl sm:text-4xl font-serif font-semibold text-stone-900 tracking-tight mb-4">
             Simple Process. Real Results.
           </h2>
-          <p className="text-lg text-slate-600 leading-relaxed">
+          <p className="text-lg text-stone-600 leading-relaxed">
             No bureaucracy. No 47-page proposals. Just clear steps from first call to working product.
           </p>
         </div>
@@ -493,17 +542,17 @@ function ProcessSection() {
               style={{ transitionDelay: inView ? `${index * 150 + 200}ms` : '0ms' }}
             >
               {/* Step number */}
-              <div className="w-14 h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center text-xl font-semibold mx-auto mb-5">
+              <div className="w-14 h-14 bg-stone-900 text-white rounded-2xl flex items-center justify-center text-xl font-semibold mx-auto mb-5">
                 {step.id}
               </div>
 
               {/* Connector line (hidden on last item and mobile) */}
               {index < PROCESS_STEPS.length - 1 && (
-                <div className="hidden lg:block absolute top-7 left-[calc(50%+28px)] w-[calc(100%-56px)] h-[2px] bg-slate-200" />
+                <div className="hidden lg:block absolute top-7 left-[calc(50%+28px)] w-[calc(100%-56px)] h-[2px] bg-stone-200" />
               )}
 
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">{step.title}</h3>
-              <p className="text-sm text-slate-600 leading-relaxed">{step.description}</p>
+              <h3 className="text-lg font-semibold text-stone-900 mb-2">{step.title}</h3>
+              <p className="text-sm text-stone-600 leading-relaxed">{step.description}</p>
             </div>
           ))}
         </div>
@@ -518,13 +567,13 @@ function AboutSection() {
   const { ref, inView } = useInView();
 
   return (
-    <section id="about" className="py-20 sm:py-28 bg-[#F6F7F9]">
+    <section id="about" className="py-20 sm:py-28 bg-[#FAFAF9]">
       <div ref={ref} className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
           {/* Left: About content */}
           <div className={`transition-all duration-700 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
-            <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">About</p>
-            <h2 className="text-3xl sm:text-4xl font-serif font-semibold text-slate-900 tracking-tight mb-6">
+            <p className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-3">About</p>
+            <h2 className="text-3xl sm:text-4xl font-serif font-semibold text-stone-900 tracking-tight mb-6">
               {ABOUT.headline}
             </h2>
 
@@ -532,7 +581,7 @@ function AboutSection() {
               {ABOUT.points.map((point, index) => (
                 <div key={index} className="flex items-start gap-3">
                   <FlaticonIcon name="fi-rr-badge-check" size={20} className="text-emerald-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-slate-600 leading-relaxed">{point}</p>
+                  <p className="text-stone-600 leading-relaxed">{point}</p>
                 </div>
               ))}
             </div>
@@ -541,7 +590,7 @@ function AboutSection() {
               href={HERO.ctaUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold px-6 py-3 rounded-full transition-colors text-sm"
+              className="inline-flex items-center gap-2 bg-stone-900 hover:bg-stone-800 text-white font-semibold px-6 py-3 rounded-full transition-colors text-sm"
             >
               <FlaticonIcon name="fi-rr-calendar" size={16} />
               Work With Me
@@ -551,14 +600,14 @@ function AboutSection() {
           {/* Right: Industries & companies */}
           <div className={`space-y-8 transition-all duration-700 delay-300 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
             {/* Industries */}
-            <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80">
+            <div className="bg-white rounded-2xl p-6 sm:p-8 border border-stone-200/80">
               <div className="flex items-center gap-2 mb-4">
-                <FlaticonIcon name="fi-rr-bullseye" size={18} className="text-slate-700" />
-                <h3 className="font-semibold text-slate-900">Industries</h3>
+                <FlaticonIcon name="fi-rr-bullseye" size={18} className="text-stone-700" />
+                <h3 className="font-semibold text-stone-900">Industries</h3>
               </div>
               <div className="flex flex-wrap gap-2">
                 {ABOUT.industries.map((industry) => (
-                  <span key={industry} className="bg-slate-100 text-slate-700 text-sm font-medium px-3 py-1.5 rounded-lg border border-slate-200">
+                  <span key={industry} className="bg-stone-100 text-stone-700 text-sm font-medium px-3 py-1.5 rounded-lg border border-stone-200">
                     {industry}
                   </span>
                 ))}
@@ -566,43 +615,43 @@ function AboutSection() {
             </div>
 
             {/* Types of companies */}
-            <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80">
+            <div className="bg-white rounded-2xl p-6 sm:p-8 border border-stone-200/80">
               <div className="flex items-center gap-2 mb-4">
-                <FlaticonIcon name="fi-rr-users" size={18} className="text-slate-700" />
-                <h3 className="font-semibold text-slate-900">Who I Work With</h3>
+                <FlaticonIcon name="fi-rr-users" size={18} className="text-stone-700" />
+                <h3 className="font-semibold text-stone-900">Who I Work With</h3>
               </div>
               <ul className="space-y-3">
                 {ABOUT.companies.map((company) => (
                   <li key={company} className="flex items-center gap-2.5">
-                    <FlaticonIcon name="fi-rr-angle-right" size={14} className="text-slate-500 flex-shrink-0" />
-                    <span className="text-slate-600 text-sm">{company}</span>
+                    <FlaticonIcon name="fi-rr-angle-right" size={14} className="text-stone-500 flex-shrink-0" />
+                    <span className="text-stone-600 text-sm">{company}</span>
                   </li>
                 ))}
               </ul>
             </div>
 
             {/* Credibility badges */}
-            <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80">
+            <div className="bg-white rounded-2xl p-6 sm:p-8 border border-stone-200/80">
               <div className="flex items-center gap-2 mb-4">
-                <FlaticonIcon name="fi-rr-shield" size={18} className="text-slate-700" />
-                <h3 className="font-semibold text-slate-900">Track Record</h3>
+                <FlaticonIcon name="fi-rr-shield" size={18} className="text-stone-700" />
+                <h3 className="font-semibold text-stone-900">Track Record</h3>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <div className="text-2xl font-semibold text-slate-900">100k+</div>
-                  <div className="text-xs text-slate-400">Users on platforms I've built</div>
+                  <div className="text-2xl font-semibold text-stone-900">100k+</div>
+                  <div className="text-xs text-stone-400">Users on platforms I've built</div>
                 </div>
                 <div>
-                  <div className="text-2xl font-semibold text-slate-900">12+</div>
-                  <div className="text-xs text-slate-400">Years shipping products</div>
+                  <div className="text-2xl font-semibold text-stone-900">12+</div>
+                  <div className="text-xs text-stone-400">Years shipping products</div>
                 </div>
                 <div>
-                  <div className="text-2xl font-semibold text-slate-900">10+</div>
-                  <div className="text-xs text-slate-400">Engineers managed as CTO</div>
+                  <div className="text-2xl font-semibold text-stone-900">10+</div>
+                  <div className="text-xs text-stone-400">Engineers managed as CTO</div>
                 </div>
                 <div>
-                  <div className="text-2xl font-semibold text-slate-900">99.9%</div>
-                  <div className="text-xs text-slate-400">SLA on enterprise infra</div>
+                  <div className="text-2xl font-semibold text-stone-900">99.9%</div>
+                  <div className="text-xs text-stone-400">SLA on enterprise infra</div>
                 </div>
               </div>
             </div>
@@ -623,11 +672,11 @@ function CaseStudiesSection() {
       <div ref={ref} className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <div className={`max-w-2xl mb-16 transition-all duration-700 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
-          <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Case Studies</p>
-          <h2 className="text-3xl sm:text-4xl font-serif font-semibold text-slate-900 tracking-tight mb-4">
+          <p className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-3">Case Studies</p>
+          <h2 className="text-3xl sm:text-4xl font-serif font-semibold text-stone-900 tracking-tight mb-4">
             Results, Not Promises
           </h2>
-          <p className="text-lg text-slate-600 leading-relaxed">
+          <p className="text-lg text-stone-600 leading-relaxed">
             Real outcomes from real engagements. Here's what happens when you bring a senior operator into the build.
           </p>
         </div>
@@ -643,7 +692,7 @@ function CaseStudiesSection() {
             return (
             <div
               key={cs.id}
-              className={`bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 hover:border-slate-300/80 hover:shadow-md transition-all duration-500 ${
+              className={`bg-white rounded-2xl p-6 sm:p-8 border border-stone-200/80 hover:border-stone-300/80 hover:shadow-md transition-all duration-500 ${
                 inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
               }`}
               style={{ transitionDelay: inView ? `${index * 100 + 200}ms` : '0ms' }}
@@ -651,34 +700,34 @@ function CaseStudiesSection() {
               {/* Tags */}
               <div className="flex flex-wrap gap-1.5 mb-4">
                 {cs.tags.map((tag) => (
-                  <span key={tag} className="text-xs font-medium bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md">
+                  <span key={tag} className="text-xs font-medium bg-stone-100 text-stone-600 px-2.5 py-1 rounded-md">
                     {tag}
                   </span>
                 ))}
               </div>
 
-              <h3 className="text-xl font-semibold text-slate-900 mb-2">{cs.title}</h3>
-              <p className="text-sm text-slate-400 font-medium mb-3">{cs.client}</p>
+              <h3 className="text-xl font-semibold text-stone-900 mb-2">{cs.title}</h3>
+              <p className="text-sm text-stone-400 font-medium mb-3">{cs.client}</p>
 
               <div className="space-y-3 mb-5">
                 <div>
-                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Challenge</p>
-                  <p className="text-sm text-slate-600 leading-relaxed">{cs.challenge}</p>
+                  <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-1">Challenge</p>
+                  <p className="text-sm text-stone-600 leading-relaxed">{cs.challenge}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Outcome</p>
-                  <p className="text-sm text-slate-700 leading-relaxed">{cs.outcome}</p>
+                  <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-1">Outcome</p>
+                  <p className="text-sm text-stone-700 leading-relaxed">{cs.outcome}</p>
                 </div>
               </div>
 
               {/* Metrics */}
-              <div className="bg-slate-50 rounded-xl p-4">
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Key Results</p>
+              <div className="bg-stone-50 rounded-xl p-4">
+                <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-2">Key Results</p>
                 <ul className="space-y-1.5">
                   {cs.metrics.map((metric, i) => (
                     <li key={i} className="flex items-start gap-2">
                       <FlaticonIcon name="fi-rr-arrow-up-right" size={14} className="text-emerald-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-slate-700 font-medium">{metric}</span>
+                      <span className="text-sm text-stone-700 font-medium">{metric}</span>
                     </li>
                   ))}
                 </ul>
@@ -689,7 +738,7 @@ function CaseStudiesSection() {
                   href={blogLink}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-start gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+                  className="flex items-start gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 transition-colors"
                 >
                   <FlaticonIcon name="fi-rr-book-open-reader" size={14} className="mt-0.5 flex-shrink-0" />
                   <span className="leading-snug text-left">{blogLabel}</span>
@@ -714,8 +763,8 @@ function TestimonialsSection() {
       <div ref={ref} className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <div className={`text-center max-w-2xl mx-auto mb-16 transition-all duration-700 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
-          <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Testimonials</p>
-          <h2 className="text-3xl sm:text-4xl font-serif font-semibold text-slate-900 tracking-tight mb-4">
+          <p className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-3">Testimonials</p>
+          <h2 className="text-3xl sm:text-4xl font-serif font-semibold text-stone-900 tracking-tight mb-4">
             What Clients Say
           </h2>
         </div>
@@ -725,23 +774,23 @@ function TestimonialsSection() {
           {TESTIMONIALS.map((t, index) => (
             <div
               key={t.id}
-              className={`bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 transition-all duration-700 ${
+              className={`bg-white rounded-2xl p-6 sm:p-8 border border-stone-200/80 transition-all duration-700 ${
                 inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
               }`}
               style={{ transitionDelay: inView ? `${index * 150 + 200}ms` : '0ms' }}
             >
-              <FlaticonIcon name="fi-rr-quote-right" size={24} className="text-slate-400 mb-4" />
-              <p className="text-slate-600 leading-relaxed mb-6 text-[15px]">{t.quote}</p>
-              <div className="border-t border-slate-200 pt-4">
+              <FlaticonIcon name="fi-rr-quote-right" size={24} className="text-stone-400 mb-4" />
+              <p className="text-stone-600 leading-relaxed mb-6 text-[15px]">{t.quote}</p>
+              <div className="border-t border-stone-200 pt-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-semibold text-slate-700">
+                  <div className="w-10 h-10 bg-stone-100 rounded-full flex items-center justify-center">
+                    <span className="text-sm font-semibold text-stone-700">
                       {t.author.split(' ').map(w => w[0]).join('')}
                     </span>
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">{t.role}</p>
-                    <p className="text-xs text-slate-500">{t.company}</p>
+                    <p className="text-sm font-semibold text-stone-900">{t.role}</p>
+                    <p className="text-xs text-stone-500">{t.company}</p>
                   </div>
                 </div>
               </div>
@@ -762,15 +811,15 @@ function FinalCTASection() {
     <section id="contact" className="py-20 sm:py-28">
       <div ref={ref} className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <div className={`transition-all duration-700 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
-          <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center mx-auto mb-8">
+          <div className="w-16 h-16 bg-stone-900 rounded-2xl flex items-center justify-center mx-auto mb-8">
             <FlaticonIcon name="fi-rr-bolt" size={28} className="text-white" />
           </div>
 
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-semibold text-slate-900 tracking-tight mb-6">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-semibold text-stone-900 tracking-tight mb-6">
             Ready to Stop Firefighting<br className="hidden sm:block" /> and Start Shipping?
           </h2>
 
-          <p className="text-lg sm:text-xl text-slate-600 leading-relaxed mb-10 max-w-2xl mx-auto">
+          <p className="text-lg sm:text-xl text-stone-600 leading-relaxed mb-10 max-w-2xl mx-auto">
             Book a free 30-minute discovery call. I'll learn about your business, your pain points, and tell you honestly whether I can help and how.
           </p>
 
@@ -779,14 +828,14 @@ function FinalCTASection() {
               href={HERO.ctaUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold px-8 py-4 rounded-full transition-colors text-lg"
+              className="inline-flex items-center gap-2 bg-stone-900 hover:bg-stone-800 text-white font-semibold px-8 py-4 rounded-full transition-colors text-lg"
             >
               <FlaticonIcon name="fi-rr-calendar" size={20} />
               Book a Discovery Call
             </a>
             <a
               href={getSocialUrl('Email')}
-              className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 font-medium px-4 py-3 transition-colors text-base"
+              className="inline-flex items-center gap-2 text-stone-600 hover:text-stone-900 font-medium px-4 py-3 transition-colors text-base"
             >
               <FlaticonIcon name="fi-rr-envelope" size={18} />
               Or send me an email
@@ -795,13 +844,13 @@ function FinalCTASection() {
 
           {/* Social links */}
           <div className="flex items-center justify-center gap-4">
-            <a href={getSocialUrl('LinkedIn')} target="_blank" rel="noopener noreferrer" className="p-3 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors" aria-label="LinkedIn">
+            <a href={getSocialUrl('LinkedIn')} target="_blank" rel="noopener noreferrer" className="p-3 text-stone-400 hover:text-stone-900 hover:bg-stone-100 rounded-full transition-colors" aria-label="LinkedIn">
               <FlaticonIcon name="fi-brands-linkedin" size={20} />
             </a>
-            <a href={getSocialUrl('GitHub')} target="_blank" rel="noopener noreferrer" className="p-3 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors" aria-label="GitHub">
+            <a href={getSocialUrl('GitHub')} target="_blank" rel="noopener noreferrer" className="p-3 text-stone-400 hover:text-stone-900 hover:bg-stone-100 rounded-full transition-colors" aria-label="GitHub">
               <FlaticonIcon name="fi-brands-github" size={20} />
             </a>
-            <a href={getSocialUrl('Email')} className="p-3 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors" aria-label="Email">
+            <a href={getSocialUrl('Email')} className="p-3 text-stone-400 hover:text-stone-900 hover:bg-stone-100 rounded-full transition-colors" aria-label="Email">
               <FlaticonIcon name="fi-rr-envelope" size={20} />
             </a>
           </div>
@@ -815,30 +864,30 @@ function FinalCTASection() {
 
 function Footer() {
   return (
-    <footer className="py-10 border-t border-slate-200">
+    <footer className="py-10 border-t border-stone-200">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           {/* Company info */}
           <div className="text-center md:text-left">
-            <p className="text-sm font-semibold text-slate-900">Joanis Innovative Ventures B.V.</p>
-            <p className="text-xs text-slate-400 mt-1">Amsterdam, Netherlands &middot; VAT NL866400485B01</p>
+            <p className="text-sm font-semibold text-stone-900">Joanis Innovative Ventures B.V.</p>
+            <p className="text-xs text-stone-400 mt-1">Amsterdam, Netherlands &middot; VAT NL866400485B01</p>
           </div>
 
           {/* Footer links */}
-          <div className="flex items-center gap-4 text-sm text-slate-400">
-            <Link to="/blog" className="hover:text-slate-900 transition-colors flex items-center gap-1.5">
+          <div className="flex items-center gap-4 text-sm text-stone-400">
+            <Link to="/blog" className="hover:text-stone-900 transition-colors flex items-center gap-1.5">
               <FlaticonIcon name="fi-rr-book-open-reader" size={14} /> Blog
             </Link>
-            <span className="text-slate-200">&middot;</span>
-            <Link to="/desktop" className="hover:text-slate-900 transition-colors flex items-center gap-1.5">
+            <span className="text-stone-200">&middot;</span>
+            <Link to="/desktop" className="hover:text-stone-900 transition-colors flex items-center gap-1.5">
               <FlaticonIcon name="fi-rr-monitor" size={14} /> Interactive Portfolio
             </Link>
-            <span className="text-slate-200">&middot;</span>
-            <a href={getSocialUrl('LinkedIn')} target="_blank" rel="noopener noreferrer" className="hover:text-slate-900 transition-colors">
+            <span className="text-stone-200">&middot;</span>
+            <a href={getSocialUrl('LinkedIn')} target="_blank" rel="noopener noreferrer" className="hover:text-stone-900 transition-colors">
               LinkedIn
             </a>
-            <span className="text-slate-200">&middot;</span>
-            <a href={getSocialUrl('GitHub')} target="_blank" rel="noopener noreferrer" className="hover:text-slate-900 transition-colors">
+            <span className="text-stone-200">&middot;</span>
+            <a href={getSocialUrl('GitHub')} target="_blank" rel="noopener noreferrer" className="hover:text-stone-900 transition-colors">
               GitHub
             </a>
           </div>
@@ -852,11 +901,11 @@ function Footer() {
 
 function Consultancy() {
   return (
-    <div className="min-h-screen bg-[#F6F7F9] text-slate-900 selection:bg-slate-200 font-sans antialiased relative overflow-hidden bg-[radial-gradient(circle_at_18%_12%,rgba(148,163,184,0.22),transparent_55%),repeating-linear-gradient(0deg,rgba(148,163,184,0.08)_0,rgba(148,163,184,0.08)_1px,transparent_1px,transparent_36px),repeating-linear-gradient(90deg,rgba(148,163,184,0.08)_0,rgba(148,163,184,0.08)_1px,transparent_1px,transparent_36px),repeating-linear-gradient(0deg,rgba(148,163,184,0.14)_0,rgba(148,163,184,0.14)_1px,transparent_1px,transparent_180px),repeating-linear-gradient(90deg,rgba(148,163,184,0.14)_0,rgba(148,163,184,0.14)_1px,transparent_1px,transparent_180px)]">
+    <div className="min-h-screen bg-[#FAFAF9] text-stone-900 selection:bg-stone-200 font-sans antialiased relative overflow-hidden bg-[radial-gradient(circle_at_18%_12%,rgba(168,162,158,0.22),transparent_55%),repeating-linear-gradient(0deg,rgba(168,162,158,0.08)_0,rgba(168,162,158,0.08)_1px,transparent_1px,transparent_36px),repeating-linear-gradient(90deg,rgba(168,162,158,0.08)_0,rgba(168,162,158,0.08)_1px,transparent_1px,transparent_36px),repeating-linear-gradient(0deg,rgba(168,162,158,0.14)_0,rgba(168,162,158,0.14)_1px,transparent_1px,transparent_180px),repeating-linear-gradient(90deg,rgba(168,162,158,0.14)_0,rgba(168,162,158,0.14)_1px,transparent_1px,transparent_180px)]">
       {/* Subtle ambient background */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-[520px] h-[520px] bg-[radial-gradient(circle,rgba(148,163,184,0.18),transparent_70%)]" />
-        <div className="absolute -bottom-48 -left-40 w-[560px] h-[560px] bg-[radial-gradient(circle,rgba(99,102,241,0.12),transparent_70%)]" />
+        <div className="absolute -top-40 -right-40 w-[520px] h-[520px] bg-[radial-gradient(circle,rgba(168,162,158,0.18),transparent_70%)]" />
+        <div className="absolute -bottom-48 -left-40 w-[560px] h-[560px] bg-[radial-gradient(circle,rgba(168,162,158,0.12),transparent_70%)]" />
       </div>
       <Navbar />
       <HeroSection />
