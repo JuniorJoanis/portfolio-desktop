@@ -12,6 +12,687 @@ export interface BlogPost {
 
 export const BLOG_POSTS: BlogPost[] = [
   {
+    slug: 'shipping-sso-saml-oidc-banks',
+    title: 'SSO for Banks: SAML, OIDC, and the IdPs That Never Read the Spec',
+    excerpt: 'Six months of enterprise SSO against bank identity providers: chained token exchanges over mTLS, single-use codes that browsers redeem twice, assertions stuffed into query strings, and why the login page is part of the protocol.',
+    date: 'August 2026',
+    readTime: '10 min read',
+    tags: ['Ruby on Rails', 'SSO', 'SAML', 'OIDC', 'Security', 'Banking'],
+    featured: false,
+    resources: [
+      { title: 'OpenID Connect Core specification', url: 'https://openid.net/specs/openid-connect-core-1_0.html' },
+      { title: 'OAuth 2.0 form_post response mode', url: 'https://openid.net/specs/oauth-v2-form-post-response-mode-1_0.html' },
+      { title: 'CVE-2015-9284 (OmniAuth login CSRF)', url: 'https://nvd.nist.gov/vuln/detail/CVE-2015-9284' },
+      { title: 'omniauth-rails_csrf_protection', url: 'https://github.com/cookpad/omniauth-rails_csrf_protection' },
+      { title: 'ruby-saml', url: 'https://github.com/SAML-Toolkits/ruby-saml' },
+      { title: 'Devise', url: 'https://github.com/heartcombo/devise' },
+    ],
+    content: `
+<h2>The Setup</h2>
+
+<p>One of my customers runs a multi-tenant platform used by private banks. Advisors and the families they serve sign in to the same product, on a per-bank subdomain, against each bank's own identity provider. For years that meant SAML 2.0. Then we added OpenID Connect, unified the two, and I spent the next six months learning that enterprise SSO is less a protocol than a collection of dialects.</p>
+
+<p>I have <a href="/blog/building-flexible-sso-authentication-system">written about building a flexible SSO system before</a>. That post was about architecture. This one is about what production does to the architecture: the running sequence of moments where the spec says X and the bank's identity provider sends Y.</p>
+
+<h2>Two Protocols, One Product</h2>
+
+<p>The platform is the Service Provider. The bank's IdP stays bank-managed, whether that is Microsoft Entra ID, an in-house identity platform, or something older. Everything tenant-specific lives in per-tenant JSON configuration: separate activation flags for SAML and OIDC, and separate flags for the two audiences, advisors and end clients.</p>
+
+<p>The decision that paid for itself came early: OIDC did not get its own login stack. One unified sessions controller is the entry point for both protocols, one shared concern does the user lookup, and a single <code>sso_user?</code> predicate answers the question every feature eventually asks. Before that predicate existed, features kept treating OIDC users as password users. A deactivation helper cleared the SAML identifier and forgot the OIDC one. Policies checked for SAML and waved OIDC through. If your product ever says the words SSO user, make them one method.</p>
+
+<p>A quiet rename mattered more than it looked. The tenant flags were originally named as if SSO simply meant SAML, one boolean per audience. They became per-protocol flags, because one boolean cannot describe two protocols.</p>
+
+<p>The lookup is identical for both protocols. Try the direct identifier already linked on the user. Fall back to the membership record, in different tables for advisors and clients, keyed by whatever identifier the bank configured. On first success, link the opaque IdP subject to the user so the next login takes the fast path. A routing hint stored at the start of the flow says which membership table to search. Get that hint wrong and an advisor signs in as a client, or the reverse.</p>
+
+<h2>The Bank Whose OIDC Is Not OIDC</h2>
+
+<p>Vanilla OIDC in Ruby is pleasant: redirect, receive an authorization code, exchange it once, optionally call the userinfo endpoint. Then we onboarded a bank whose in-house IdP speaks a chained, mutual-TLS dialect that diverges in three places at once:</p>
+
+<ul>
+  <li><strong>Two token requests instead of one.</strong> First a client credentials call over mTLS, with no client secret, returning an application token. Then the authorization code exchange on the same mTLS connection, authenticated with that application token as a bearer. Sometimes the response contains an id token but no access token at all, and the OIDC library insists on one, so we default it.</li>
+  <li><strong>A client certificate instead of a client secret.</strong> The relying party certificate is registered in the bank's developer portal. The OAuth gem cannot layer a client certificate into its token request, so for this tenant we bypass it and speak plain Net::HTTP.</li>
+  <li><strong>No userinfo endpoint.</strong> Every claim we need lives in the id token, and the stock userinfo step is a no-op.</li>
+</ul>
+
+<p>Then the id token arrived without a nonce, while the verifier still consumed the nonce we had stored in the session and refused the login. Sending a nonce is now a tenant setting, off for the chained flow, and those tokens are verified with the nonce check skipped while issuer, audience, expiry, and signature checks all stay on.</p>
+
+<p>One more surprise: the claim identifying the user was not <code>sub</code>, not <code>email</code>, not <code>preferred_username</code>. It was a custom claim, and it changed during the integration. Rather than hardcode the bank into the callback, the claim name became tenant configuration too, next to a debug flag that logs which claims the IdP actually sent, base64-encoded so no personal data lands in the logs.</p>
+
+<p>The lesson: when a bank says its IdP does OIDC, assume it does not until a real token response parses. And make every deviation tenant configuration instead of an if-this-bank conditional scattered through callbacks. Our custom strategy is still shaped by one bank's dialect, but the knobs are data.</p>
+
+<h2>Single-Use Codes Versus Browsers That Call Back Twice</h2>
+
+<p>That same IdP issues single-use authorization codes, and redeeming one twice returns a 500. Our first reaction was the correct security instinct: never exchange a code twice. We added a replay guard, a cache lock keyed on a hash of the code, mirroring the validator we already had for SAML assertions. First exchange wins, duplicates are rejected. We also stopped retrying the code exchange on server errors, because automatic retries are exactly how you burn a single-use code, and kept backoff only on the application token call, which is safe to re-mint.</p>
+
+<p>Then the request logs showed the real user symptom: the first login always failed and the retry always worked. Browsers were sending duplicate GET callbacks with the same code, sixteen to eighty-six seconds apart. Link prefetching, corporate URL scanners, a refresh on the back button. The first exchange succeeded and signed the user in. The second hit our replay guard, and whichever response the browser actually followed was the error page. Our own protection was losing the race against ourselves.</p>
+
+<p>So the guard flipped from rejecting duplicates to replaying them idempotently:</p>
+
+<pre><code class="language-ruby"># First exchange wins; its successful response is cached briefly.
+# A later callback carrying the same code replays the cached success
+# instead of burning the single-use code a second time.
+key = "oidc:code_used:#{tenant_id}:#{Digest::SHA256.hexdigest(code)}"
+cached = Rails.cache.read(key)
+return cached if cached
+
+response = exchange_authorization_code!(code)
+Rails.cache.write(key, response, expires_in: 120.seconds) if response.success?
+response</code></pre>
+
+<p>Only successes are cached, so a transient failure can still retry, and the code is exchanged with the bank exactly once. The trade-off is written down where we made it: within that short window, a holder of the code gets a session. The window is sized from the worst duplicate gap we observed, and the long-term fix is the form_post response mode, so the callback stops being a GET that anything can prefetch.</p>
+
+<p>It took me a while to phrase the lesson: replay protection and duplicate-callback tolerance are different problems. A reused SAML assertion is an attack and gets rejected. A duplicated OIDC callback on a GET is usually the browser talking to itself, and for two minutes we treat it that way.</p>
+
+<h2>Never Put an Assertion in a Query String</h2>
+
+<p>One bank's SAML logins started failing with XML parse errors deep inside the SAML library. The assertion consumer endpoint received a large, line-wrapped assertion, then redirected to the framework callback with the whole SAMLResponse in the GET query string. Proxies and browsers truncate long URLs, and the library was left trying to parse the surviving half of a base64 blob as XML.</p>
+
+<p>The fix was to stop redirecting. The endpoint now renders a tiny auto-submitting HTML form that POSTs the assertion to the callback, the same pattern we already used in the other direction for the IdP POST binding. The interstitial carries the tenant brand, a continuing-secure-sign-in line, and a noscript fallback. It looks like polish. It is actually how you keep a twenty-kilobyte assertion off a URL.</p>
+
+<h2>Smaller Fights, Same War</h2>
+
+<ul>
+  <li><strong>Login CSRF is a GET.</strong> CVE-2015-9284: if the OmniAuth request phase is reachable via GET, an attacker can start an SSO flow from a crafted link. We were still carrying a Rails 6 era workaround that allowed GET initiation. POST-only initiation came back along with the OmniAuth CSRF protection gem, every post-login redirect goes through an allow-list of tenant hosts, and the mobile completion page rejects any navigation target that is not a rooted relative path or a trusted URL, so a javascript: URL can never reach window.location.</li>
+  <li><strong>A session cookie set on a redirect does not always stick.</strong> One bank's mobile users completed OIDC and arrived at the very next request anonymous. The callback set the cookie and immediately returned a 302, and some in-app-browser handoffs drop cookies set on a 3xx response. The fix is a 200 interstitial with a meta refresh. We shipped it as a hypothesis, behind a tenant flag with debug logging and no personal data, and only made it the default for mobile SSO once the bank confirmed the cookie finally stuck. Same cookie, different status code. That was the entire bug.</li>
+  <li><strong>Block password login before Warden succeeds.</strong> SSO-only tenants still have a credential form, and QA found that blocked users were still receiving a two-factor SMS. The OTP gem sends it from a Warden after_authentication hook, which fires inside the authenticate call, and our guard sat one line after it. The gate moved into the one method Devise consults before any of that:
+<pre><code class="language-ruby"># Devise calls this before success! and before any Warden hook,
+# so a blocked credential login sends no OTP and builds no session.
+def valid_for_authentication?
+  return false if sso_only_tenant? &amp;&amp; !credential_login_allowed?
+  super
+end</code></pre>
+  If you ever need a break-glass exception, put it in that predicate, not in the 2FA controller.</li>
+  <li><strong>The SAML gem has its own user locator.</strong> One audience's login path failed before authentication because the Devise SAML integration locates users through its own configurable hook, and that route only checked the direct identifier while the main route also fell back to memberships. The fix wired a shared resource locator around one extracted identity object, so the two paths cannot drift apart again. The tempting shortcut, parsing the encrypted assertion before validation to look the user up earlier, broke the signature check. Lookup stays after validation, so a forged assertion never touches the database.</li>
+  <li><strong>An IdP saying no is not an exception.</strong> SAML error responses used to raise inside the strategy and surface as a 500 page. They are a failed callback now: the user sees a localized, boring message that we could not sign them in, and the error tracker keeps the interesting part.</li>
+</ul>
+
+<h2>Provisioning Is the Other Half</h2>
+
+<p>Authentication without a local user is a 401 with extra steps. We deliberately did not build SCIM. Memberships are provisioned through the API and the admin UI, which set the per-membership SSO identifier. An opt-in auto-invite gives API-created client memberships a login without sending an invitation email, and it skips identifiers that are not email-shaped instead of inventing placeholder addresses. Revocation actually revokes: removing a membership clears the linked identifiers on the user, so the fast direct-lookup path cannot sign someone back in after their access is gone. And the allowed email domain per tenant became a comma-separated list the day we learned one bank operates two countries under two different email domains.</p>
+
+<p>Just-in-time creation from the IdP, minting a user because a valid assertion arrived, is the thing I keep refusing for employees. A bank's IdP asserting that a person exists is not the same as that person being entitled to a seat in the product. Seats you did not provision are seats you cannot bill and cannot offboard.</p>
+
+<h2>What SAML Really Is</h2>
+
+<p>Under everything, SAML is a certificate product pretending to be an authentication product. The service provider certificate that encrypts requests and decrypts assertions renews on our side, and during rotation both the old and new certificates are served so every bank can update on its own schedule instead of a flag day. Each bank's IdP certificate rotates on the bank's calendar; miss one renewal and every login on that tenant dies on a signature check. Even local development needs real HTTPS before any of it works, which is why the local setup is a documented, scripted runbook rather than tribal knowledge.</p>
+
+<p>One clarification I now paste into every security questionnaire, because banks ask all three questions on the same form: OIDC and SAML sign a person into the product. OAuth authorization code with PKCE lets that person grant an external tool access as them, which is how the <a href="/blog/shipping-mcp-server-multi-tenant-rails">AI connectors I wrote about recently</a> work. Client credentials lets a server talk to the API with no user at all. Three different sentences, three different security stories.</p>
+
+<h2>What I Keep</h2>
+
+<ul>
+  <li><strong>One lookup, two protocols.</strong> The shared concern and the single <code>sso_user?</code> predicate paid for themselves the first time a feature treated OIDC as not really SSO.</li>
+  <li><strong>Tenant configuration over bank conditionals.</strong> Claim names, nonce behavior, the chained exchange, debug logging: all data, no special cases in code.</li>
+  <li><strong>POST the secrets.</strong> Assertions, request phases, handoffs between endpoints. GET is for navigation, not for base64 that is somebody's session.</li>
+  <li><strong>Fail closed, message generically.</strong> Validators reject, redirect hosts are allow-listed, flash messages are localized and dull, and the detail goes to the error tracker instead of the sign-in page.</li>
+  <li><strong>Instrument before you fix mobile.</strong> The completion page shipped as a flagged hypothesis with logs, and became the default only when the evidence came back.</li>
+</ul>
+
+<p>The spec is the easy part. The dialects are the job.</p>
+`,
+  },
+  {
+    slug: 'shipping-mcp-server-multi-tenant-rails',
+    title: 'Shipping an MCP Server Into a Multi-Tenant Rails App',
+    excerpt: 'What it took to put a Model Context Protocol server in front of a multi-tenant Rails wealth platform: OAuth surprises, stale tool caches, consent boundaries, and the checks that only count when they run on every request.',
+    date: 'August 2026',
+    readTime: '24 min read',
+    tags: ['Ruby on Rails', 'MCP', 'OAuth2', 'Security', 'AI', 'WealthTech'],
+    featured: true,
+    resources: [
+      { title: 'Model Context Protocol', url: 'https://modelcontextprotocol.io' },
+      { title: 'MCP security best practices', url: 'https://modelcontextprotocol.io/specification/latest/basic/security_best_practices' },
+      { title: 'Claude custom connectors guide', url: 'https://support.claude.com/en/articles/11175166-getting-started-with-custom-connectors-using-remote-mcp' },
+      { title: 'SEP-2549: TTL for list results', url: 'https://modelcontextprotocol.io/seps/2549-TTL-for-list-results' },
+      { title: 'Claude.ai stale tool catalog (public issue)', url: 'https://github.com/anthropics/claude-ai-mcp/issues/45' },
+      { title: 'FastMCP tool search', url: 'https://gofastmcp.com/servers/transforms/tool-search' },
+      { title: 'MCP Ruby SDK cache hints', url: 'https://github.com/modelcontextprotocol/ruby-sdk/pull/436' },
+      { title: 'Doorkeeper', url: 'https://github.com/doorkeeper-gem/doorkeeper' },
+    ],
+    content: `
+<h2>The Setup</h2>
+
+<p>One of my customers runs a wealth planning platform: a multi-tenant Rails application, one Postgres schema per tenant, where financial advisors manage the estates of the families they advise. I spent about a month putting a <a href="https://modelcontextprotocol.io" target="_blank">Model Context Protocol</a> server in front of it, so that advisors can connect Claude, ChatGPT, Copilot, or Le Chat to their book of families and ask questions in natural language.</p>
+
+<p>This post is the engineering story. Not the architecture slide, but the actual sequence of decisions that seemed right until they were not. If you are about to put an MCP server in front of a real production app, I hope it saves you a few detours.</p>
+
+<h2>What Shipped</h2>
+
+<p>The server lives in-process, mounted at <code>/mcp</code> on the tenant subdomain. Same Ruby process as the rest of the app. Tools call Pundit policies and ActiveRecord directly, with no HTTP hop through the existing REST API and no second service to operate.</p>
+
+<p>On the wire, a client sees exactly two tools: <code>list_platform_tools</code> for discovery and <code>call_platform_tool</code> for dispatch. Behind them sit around 23 internal tools covering estate inventory, value history, ownership structures, and the advisor view across a whole book of clients. Access to any of them is the intersection of three layers:</p>
+
+<ol>
+  <li><strong>OAuth scopes</strong> the advisor ticked on the consent screen: estate, performance, ownership, detail, advisor</li>
+  <li><strong>Pundit policies</strong>, the same per-user authorization rules the web app already enforces</li>
+  <li><strong>A per-tenant feature flag</strong>, off by default, checked on every request</li>
+</ol>
+
+<p>Authentication is Doorkeeper: RFC 7591 Dynamic Client Registration, authorization code with PKCE, opaque access tokens, refresh tokens, and discovery through the standard well-known endpoints. Nothing exotic. And still, almost every sentence of the original plan document got argued with before the month was over.</p>
+
+<p>In code, every request enters through one controller. The protocol layer registers only the two meta-tools; real access is decided later, from the token:</p>
+
+<pre><code class="language-ruby"># Every /mcp POST. The registered tools are only the two meta-tools.
+# Real access is decided later, from the token.
+class Mcp::ServerController &lt; ActionController::API
+  before_action :authenticate_mcp_user!   # opaque Bearer → resource_owner
+  before_action :ensure_mcp_enabled!      # tenant flag, every request
+  before_action :ensure_employee!         # advisors only
+
+  def handle
+    server = MCP::Server.new(
+      name: tenant.commercial_name,
+      tools: [ListPlatformTools, CallPlatformTool],
+      server_context: {
+        current_user: current_user,
+        granted_tools: ToolScopes.tools_for(access_token.scopes)
+      }
+    )
+    transport = MCP::Server::Transports::StreamableHTTPTransport.new(
+      server, stateless: true, dns_rebinding_protection: false
+    )
+    status, headers, body = transport.handle_request(request)
+    render json: body.first, status: status
+  end
+end</code></pre>
+
+<p>And behind the dispatcher, a real tool looks like a Pundit-backed query, not an HTTP client:</p>
+
+<pre><code class="language-ruby">class GetEstateSummaryTool &lt; InternalTool
+  mcp_tool_group :estate
+
+  def self.call(group_id:, server_context:)
+    group = server_context[:current_user].authorized_groups.find(group_id)
+    authorize(group, :show?)
+    Response.new(summary_for(group))
+  end
+end</code></pre>
+
+<h2>Do Not Wrap Your Existing API</h2>
+
+<p>The first fork in the road: tag existing controllers with MCP metadata, proxy the existing REST API, or embed a dedicated MCP server inside Rails.</p>
+
+<p>Controller actions are shaped for HTTP clients. They paginate, they limit fields, they nest JSON envelopes. MCP tools want dense, pre-aggregated payloads optimized for a model that reads them in one gulp. Blending the two pollutes both.</p>
+
+<p>Proxying through the REST API looked attractive because it already had logging and authentication. But it adds a network hop, and it forces every MCP aggregation to have a matching REST endpoint forever. I went in-process instead: the tools reuse the same Pundit policies and service objects the app already trusts, and MCP got its own audit table.</p>
+
+<pre><code class="language-ruby"># Tempting, and wrong for this product:
+class GetEstateSummaryTool
+  def self.call(group_id:, server_context:)
+    HTTParty.get(
+      "#{api_host}/v2/groups/#{group_id}/summary",
+      headers: { "Authorization" => "Bearer #{server_context[:token]}" }
+    )
+  end
+end
+
+# What shipped: same process, same policies, a payload shaped for a model.
+class GetEstateSummaryTool &lt; InternalTool
+  def self.call(group_id:, server_context:)
+    group = fetch_group!(group_id, server_context)
+    {
+      group_id: group.public_id,
+      totals_by_currency: EstateSummary.new(group).totals,
+      allocation: EstateSummary.new(group).by_category
+    }
+  end
+end</code></pre>
+
+<p>That decision held. Almost nothing else from week one did.</p>
+
+<h2>Four Puma Workers Versus a Stateful Transport</h2>
+
+<p>The first transport was stateful Streamable HTTP, with Redis pub/sub fanning out tool-list-changed notifications across workers. Staging runs <code>WEB_CONCURRENCY=4</code>. Without session affinity, the next POST from a client lands on a worker that has never heard of the session:</p>
+
+<pre><code class="language-text">-32600 Session not found</code></pre>
+
+<p>The stateful setup looked innocent: one memoized transport per process, sessions in memory, Redis to fan notifications out across workers:</p>
+
+<pre><code class="language-ruby"># Before: one transport per process, sessions in memory, Redis for fan-out.
+# POST /mcp hits worker 3; the session lives on worker 1 → -32600.
+class &lt;&lt; self
+  def transport
+    @transport ||= begin
+      server = MCP::Server.new(tools: ApplicationTool.descendants)
+      MCP::Server::Transports::StreamableHTTPTransport.new(server, stateless: false)
+    end
+  end
+end</code></pre>
+
+<p>I also lost a day to a 401 that had nothing to do with OAuth. The app uses the Apartment gem for schema-per-tenant multi-tenancy, and the MCP endpoint used <code>ActionController::Live</code> for streaming. Live runs the action and its callbacks on a separate thread. Apartment copies the tenant label to that thread, but the checked-out database connection still points at the default schema. Token lookup ran against the wrong schema, found nothing, returned 401. The fix was an <code>around_action</code> that re-applies the tenant switch for the whole request, wrapping authentication as well as dispatch:</p>
+
+<pre><code class="language-ruby">around_action :switch_tenant!
+
+def switch_tenant!(&amp;block)
+  Apartment::Tenant.switch(current_tenant_schema, &amp;block)
+end</code></pre>
+
+<p>Then I threw the stateful design away entirely. The server now runs stateless: every POST builds a fresh MCP server and transport, any worker can serve any request, and there is no session store, no sticky load balancing, and no Redis subscriber threads dying quietly on worker boot.</p>
+
+<pre><code class="language-ruby"># After: cheap to build, nothing to pin, nothing to fan out.
+def build_transport
+  server = MCP::Server.new(
+    tools: [ListPlatformTools, CallPlatformTool],
+    server_context: { current_user:, granted_tools: }
+  )
+  MCP::Server::Transports::StreamableHTTPTransport.new(
+    server,
+    stateless: true,
+    dns_rebinding_protection: false  # tenant.example.com is not loopback
+  )
+end</code></pre>
+
+<p>The trade-off is no server-to-client push. The tools are read-only single-result queries, so clients simply pick up catalog changes on their next list call. One more wrinkle: the Ruby SDK ships DNS rebinding protection with a loopback-only host allow-list, and every real request arrives on a tenant subdomain, so that protection had to be switched off.</p>
+
+<p>A debugging note that cost me real time: most of the local Session not found errors were not the affinity bug at all. They were an artifact of local threading, leaked test streams, and code reloading resetting the transport. Staging, with a single MCP Inspector connection, was the only honest signal I had. Be suspicious of transport bugs reproduced only on a laptop.</p>
+
+<h2>The Client Caches Your Tool List, and You Cannot Unstick It</h2>
+
+<p>This is the constraint that ended up shaping the whole design.</p>
+
+<p>Claude.ai caches the result of <code>tools/list</code> when a connector is set up. The documented behavior is a one-hour cache with automatic refresh. The observed behavior, in <a href="https://github.com/anthropics/claude-ai-mcp/issues/45" target="_blank">the public tracking issue</a> and <a href="https://github.com/anthropics/claude-ai-mcp/issues/137" target="_blank">related reports</a>, is worse:</p>
+
+<ul>
+  <li>The client receives the list-changed notification, re-fetches the list, gets the new answer from the server, and the model still reports the old tools. The fetch happens; the response is discarded somewhere above the MCP session layer.</li>
+  <li>The stale list can survive disconnecting, deleting and re-adding the connector, and a full OAuth re-consent, sometimes for more than 24 hours.</li>
+  <li>The connector settings screen can show the updated tool list while the model still sees the old one.</li>
+  <li>A bad catalog deploy cannot be cleanly rolled back, because already-connected clients stay stuck on the stale list either way.</li>
+</ul>
+
+<p>That last point reframed the problem for me. Repairing the notification pipeline cannot fix a client that ignores the notification. The Redis pub/sub pipeline did not need fixing. It needed deleting.</p>
+
+<p>The established workaround is a pair of meta-tools: one that lists the real tools, one that calls them by name. <a href="https://gofastmcp.com/servers/transforms/tool-search" target="_blank">FastMCP ships the same idea</a> as a first-class feature it calls tool search. That is what the two wire tools from the top of this post are. A model whose cached list is stale can still discover and call anything it is entitled to, because only the catalog is cached, never the responses.</p>
+
+<pre><code class="language-ruby">class ListPlatformTools &lt; ApplicationTool
+  def self.call(server_context:, **)
+    tools = Array(server_context[:granted_tools]).map(&amp;:to_h)
+    Response.new({ tools:, count: tools.size })
+  end
+end</code></pre>
+
+<p>The server also emits the draft cache hints from <a href="https://modelcontextprotocol.io/seps/2549-TTL-for-list-results" target="_blank">SEP-2549</a>: a five-minute TTL and a private cache scope.</p>
+
+<pre><code class="language-ruby">MCP::Server.new(
+  name: server_name,
+  tools: [ListPlatformTools, CallPlatformTool],  # what tools/list returns
+  server_context: { current_user:, granted_tools: },
+  ttl_ms: 5.minutes.in_milliseconds,
+  cache_scope: "private"  # ttl_ms alone defaults the scope to public
+)</code></pre>
+
+<p>Private is not optional here. The tool list is filtered per advisor, so a shared cache must never serve one user the catalog of another. Current clients may ignore these fields entirely, since the negotiated protocol version predates them. They are cheap insurance for the day that changes.</p>
+
+<p>One honest caveat, which I wrote in the review at the time and will repeat in public: when this shipped, no client had ever connected to production. I was pre-empting a documented client defect, not reacting to production pain. I still believe it was the right call, because the cost of being wrong arrives exactly when it can no longer be fixed cheaply. But there is a difference between those two situations, and it is worth being truthful about which one you are in.</p>
+
+<h2>Dispatch Quietly Deleted the Authorization Boundary</h2>
+
+<p>The consent model was originally enforced in a clean way: filter the list of tools handed to the MCP server at registration time. The server rejects calls to anything not registered, so the registered set is the authorization boundary. One invariant, easy to reason about.</p>
+
+<pre><code class="language-ruby"># Before dispatch: the gem is the boundary.
+MCP::Server.new(tools: consented_tools)
+# tools/call "get_advisor_aum" → rejected if not in consented_tools</code></pre>
+
+<p>Then the meta-tools arrived, and the dispatcher looked tools up by scanning all internal tool classes, unfiltered. Registration filtering now scoped nothing. A connector could reach all 23 tools through dispatch regardless of what the advisor had approved. Two correct designs had merged into one broken one, and neither change was wrong in isolation.</p>
+
+<pre><code class="language-ruby"># After dispatch, this no longer means anything:
+MCP::Server.new(tools: [ListPlatformTools, CallPlatformTool])
+
+class CallPlatformTool
+  def self.call(tool_name:, arguments:, **)
+    InternalTool.descendants.find { |t| t.tool_name == tool_name }
+                .call(**arguments)   # every tool, consent ignored
+  end
+end</code></pre>
+
+<p>The first fix attempt was a side table: per-user connection records with their granted tool groups, written at consent time. It worked. I threw it away anyway, for a lifetime reason. The defining feature of a side table is that you can edit it without the user re-consenting, and that is not what a consent screen implies. A grant made on a consent screen should live exactly as long as the token it produced, and change only through re-consent. So the grant moved onto the access token itself, as OAuth scopes.</p>
+
+<p>Client registration stores the full scope vocabulary, which only makes each group requestable. When the advisor clicks Allow, the server rebuilds the requested scope from the ticked boxes before Doorkeeper assembles the grant. On every request, the resource server resolves the token scopes into tool classes and hands them to the meta-tools as the set of granted tools. The whole lifecycle fits in three snippets:</p>
+
+<pre><code class="language-ruby"># Registration: requestable, not granted.
+application.scopes = "mcp mcp:estate mcp:performance mcp:ownership mcp:detail mcp:advisor"
+
+# Consent Allow: the token records what was ticked.
+params[:scope] = ToolScopes.scopes_from_tool_groups(
+  params[:tool_groups],
+  within: session[:requested_scope]
+)
+# => "mcp mcp:estate"
+
+# Resource server: the token is the grant.
+def granted_tools
+  ToolScopes.tools_for(access_token.scopes)
+end</code></pre>
+
+<p>Both meta-tools are then bounded by that resolved set:</p>
+
+<pre><code class="language-ruby"># Bounded by the grant, never by a global class list. Array() fails
+# closed when granted_tools is absent. A declined tool and an unknown
+# tool answer in the same words, so the error cannot be used to probe
+# which groups were left unticked.
+def find_tool!(tool_name, server_context)
+  Array(server_context[:granted_tools])
+    .find { |tool| tool.tool_name == tool_name } ||
+    raise(UnknownToolError, "Unknown tool: #{tool_name}")
+end</code></pre>
+
+<p>Two properties of this arrangement turned out to be load-bearing:</p>
+
+<ul>
+  <li><strong>A declined tool is refused in exactly the same words as a tool that does not exist.</strong> If the two messages differ, the error becomes an oracle for enumerating which groups the advisor left unticked.</li>
+  <li><strong>A request with no resolved grant denies everything.</strong> A token missing the base scope resolves to no tools at all, not to a friendly core subset. Fail closed twice.</li>
+</ul>
+
+<pre><code class="language-ruby">def tools_for(scopes)
+  return [] unless scopes.include?("mcp")   # not an MCP grant at all
+  InternalTool.descendants.select { |t| granted_groups(scopes).include?(t.mcp_tool_group) }
+end</code></pre>
+
+<h2>Open Client Registration Is a Phishing Primitive</h2>
+
+<p>MCP clients register themselves through RFC 7591 Dynamic Client Registration. That is the point of the standard: Claude, ChatGPT, Copilot, Inspector, command-line proxies. Nobody wants to maintain an allow-list of client ids.</p>
+
+<p>It also means anyone can POST to the registration endpoint with the client name Claude and a redirect URI pointing at a server they control.</p>
+
+<pre><code class="language-text"># Open DCR: the name is attacker-controlled.
+POST /mcp/oauth/register
+{ "client_name": "Claude", "redirect_uris": ["https://evil.example/callback"] }</code></pre>
+
+<p>The first version of the consent screen mapped the client name to a brand logo, so a spoofed name unlocked the Claude logo on the exact page where an advisor decides whether to hand over estate data. The fix: brand marks are matched on the redirect URI host against an exact allow-list (claude.ai, chatgpt.com, copilot.microsoft.com, chat.mistral.ai). The consent screen shows that host prominently, tucks the full redirect URI behind a disclosure, and puts an unverified app badge on anything unknown. A spoofed name now earns a generic icon and a warning instead of a logo.</p>
+
+<p>The heart of the fix is small: stop trusting the name, start trusting the callback host, matched exactly against a tiny allow-list.</p>
+
+<pre><code class="language-ruby"># Wrong: trust the name.
+def brand_for(application)
+  BRANDS[application.name.downcase]   # "claude" → official glyph
+end
+
+# Right: trust the callback host, never interpolate it into the SVG.
+KNOWN_HOSTS = {
+  "claude.ai"              => CLAUDE,
+  "chatgpt.com"            => OPENAI,
+  "copilot.microsoft.com"  => COPILOT,
+  "chat.mistral.ai"        => MISTRAL
+}.freeze
+
+def brand_for(redirect_uri)
+  host = URI(redirect_uri).host.delete_prefix("www.")
+  KNOWN_HOSTS[host]   # nil → generic avatar + "Unverified app"
+end</code></pre>
+
+<p>None of this is my invention. The <a href="https://modelcontextprotocol.io/specification/latest/basic/security_best_practices" target="_blank">MCP security best practices document</a> describes exactly this class of attack, and its consent screen requirements (identify the client, show the scopes requested, show the registered redirect URI, validate it with exact string matching) read like a checklist of everything the first version got wrong. If you are building a connector target for Claude, Anthropic also publishes a <a href="https://support.claude.com/en/articles/11175166-getting-started-with-custom-connectors-using-remote-mcp" target="_blank">getting started guide for custom connectors</a> that is worth handing to the advisor who asks what they are about to connect. I wish I had read the security document before designing the consent screen rather than after.</p>
+
+<p>A related surprise that is not a bug: after an admin revokes a connector, reconnecting creates a brand new OAuth application with a new client id. Same display name, different identity. The admin list then shows two rows called Claude, which looks like a glitch. It is Dynamic Client Registration working as designed, the client simply does not reuse a revoked registration. Hiding those rows would be worse, because the list is the only place a rogue connector can be killed.</p>
+
+<h2>Consent Is a Security Boundary, and the Form Will Lie to You</h2>
+
+<p>The first consent screen grouped tools into checkboxes that mixed two different axes. Some groups split by domain: ownership, performance, the advisor book. Others split by depth: overview versus beneficiaries, policyholders, and legal clauses. The result was a screen where ticking one box while leaving a similar-sounding one unticked granted access to donation clauses while declining the portfolio list. That is not a question a human can answer correctly.</p>
+
+<p>I rebuilt the vocabulary so each checkbox is one axis: a base group that is always on, then estate, performance, ownership, advisor, and a separate detail permission that explicitly unlocks depth. Ticking nothing fails closed to the directory tools, so an empty consent still produces a connector that can explain itself rather than a dead one.</p>
+
+<p>Then a review found a real escalation. The ceiling that stops consent from granting more than the connector asked for was read from an unsigned hidden form field. Before Dynamic Client Registration, an over-wide request would have been caught by the registered-scopes check, because clients used to be registered with the base scope only. After DCR, every client holds the full vocabulary, so that check always passes. A crafted POST, a browser extension, or an XSS could tick the advisor box on a request that only asked for estate access, and the user would never know.</p>
+
+<p>The fix: stash the scope from the GET phase of the authorize flow in the session, bound to the client id, and use that as the ceiling when the Allow POST arrives. A missing stash fails closed to the base scope.</p>
+
+<pre><code class="language-ruby"># GET /mcp/oauth/authorize?scope=mcp+mcp:estate
+before_action :stash_requested_scope!, only: :new
+
+def stash_requested_scope!
+  session[:mcp_requested_scope] = {
+    "client_id" => params[:client_id],
+    "scope"     => params[:scope]          # the connector's own request
+  }
+end
+
+# POST /mcp/oauth/authorize  (Allow)
+# The hidden field is unsigned. Do not use it as the ceiling.
+before_action :narrow_scope_to_consent!, only: :create
+
+def narrow_scope_to_consent!
+  params[:scope] = ToolScopes.scopes_from_tool_groups(
+    params[:tool_groups],
+    within: stashed_scope_for(params[:client_id])  # session, not the form
+  )
+end
+
+def stashed_scope_for(client_id)
+  stash = session[:mcp_requested_scope]
+  return unless stash &amp;&amp; stash["client_id"] == client_id
+  stash["scope"]
+end
+# missing stash → within: nil → token carries only "mcp"</code></pre>
+
+<p>There is a spec that POSTs a widened scope with extra groups and asserts the token stays capped, because this is exactly the kind of fix that quietly regresses:</p>
+
+<pre><code class="language-ruby">it "ignores a forged wider scope on the consent POST" do
+  get  "/mcp/oauth/authorize", params: { scope: "mcp mcp:estate", client_id: }
+  post "/mcp/oauth/authorize", params: {
+    scope: "mcp mcp:estate mcp:advisor",   # forged hidden field
+    tool_groups: %w[estate advisor],
+    client_id:
+  }
+  expect(issued_token.scopes.to_a).to contain_exactly("mcp", "mcp:estate")
+end</code></pre>
+
+<p>One limitation accepted knowingly: re-consenting with fewer groups mints a narrower token but does not revoke the broader one already in the wild, and refresh tokens keep it alive. Narrowing takes effect when the old token dies. Closing that gap means revoking prior grants on each new consent, and it is on the list.</p>
+
+<pre><code class="language-ruby"># Not shipped yet. Without this, narrowing is delayed until expiry.
+Doorkeeper::AccessToken.revoke_all_for(application.id, resource_owner)</code></pre>
+
+<h2>Dispatch Is a Router, and Routers Leak</h2>
+
+<p>The dispatcher became the hottest code in the server, and in one month it accumulated a respectable collection of bug classes.</p>
+
+<ul>
+  <li><strong>It rescued StandardError and returned the exception message to the model.</strong> SQL fragments, hostnames, internal class names, record ids, straight into a third-party AI conversation. The HTTP controller already returned a generic internal error for exactly this reason. The dispatcher now does the same: generic string to the client, full exception to Sentry.</li>
+  <li><strong>ArgumentError did double duty.</strong> The tool lookup raised ArgumentError for unknown tool names, and real tools also raise ArgumentError for wrong keywords. So genuine bugs were shown to clients as unknown tool and never reached Sentry. Unknown names get a dedicated error class; everything else is a real error and gets reported.</li>
+  <li><strong>One rescue referenced an error class that does not exist in the SDK.</strong> Any authorization denial routed through it would have raised NameError. The method turned out to be unused, so it was deleted rather than repaired. Dead security code is worse than no code, because it reads like coverage.</li>
+  <li><strong>Audit rows doubled.</strong> The dispatcher and the inner tool each wrote an audit row per call. Successes now log once, from the inner tool, while the dispatcher records only refusals, which are the security signal: a client probing beyond its grant. A reviewer read the early return in the logging path as discarding the tool response entirely. It did not, the return was inside the logging method, but it was easy to misread and easy to fix into a real outage. That code now has a comment.</li>
+  <li><strong>Schema validation left the protocol layer.</strong> The SDK validates arguments against each registered tool schema. Under dispatch, arguments arrive as one untyped object, and validation degrades to Ruby raising on a keyword mismatch. That is part of the price of the cache workaround, and it is only honest to say so.</li>
+</ul>
+
+<p>And one deliberate omission: the dispatcher carries no read-only annotation, even though every tool behind it is read-only today. A dispatcher is only as read-only as the most permissive tool it can ever reach, and nothing enforces that invariant. Leaving the hint off means clients keep prompting the user on dispatch, which partially restores the per-tool approval this pattern bypasses.</p>
+
+<p>Put together, the hardened dispatcher fits on one screen:</p>
+
+<pre><code class="language-ruby">class CallPlatformTool &lt; ApplicationTool
+  log_failures_only   # refusals only; the inner tool logs successes
+  # deliberately NOT annotated read_only_hint: true
+
+  UnknownToolError = Class.new(ArgumentError)
+  UNEXPECTED = "The tool failed unexpectedly."
+
+  def self.call(tool_name:, server_context:, arguments: {})
+    tool = find_tool!(tool_name, server_context)
+    tool.call(
+      **(arguments || {}).to_h.transform_keys(&amp;:to_sym),  # JSON null → {}
+      server_context:
+    )
+  rescue Pundit::NotAuthorizedError, ActiveRecord::RecordNotFound, UnknownToolError => e
+    error_response(e.message, tool_name)
+  rescue StandardError => e
+    Sentry.capture_exception(e)
+    error_response(UNEXPECTED, tool_name)   # never e.message
+  end
+end</code></pre>
+
+<p>And the audit logger checks the error flag on the result, not merely that the call returned:</p>
+
+<pre><code class="language-ruby">module AuditLogger
+  def call(server_context:, **kwargs)
+    result = super
+    success = !(result.respond_to?(:error?) &amp;&amp; result.error?)
+    write_log(..., success:)   # check the flag, not "the call returned"
+    result                     # write_log's early return must not eat this
+  end
+
+  def write_log(..., success:)
+    return if success &amp;&amp; log_failures_only?   # skip the row, not the result
+    McpAuditLog.create!(tool_name:, success:, duration_ms:)
+  end
+end</code></pre>
+
+<h2>The Consent Page Is Where Branding Goes to Die</h2>
+
+<p>The consent and error pages render outside the application layout. No SPA, no theme pipeline, just standalone server-rendered pages. On white-label tenants they showed the platform default brand palette and a system font, directly next to the tenant name and favicon those same pages already displayed. The one page where an advisor decides whether to share estate data looked like somebody else made it.</p>
+
+<pre><code class="language-ruby"># layout false: these pages never see the SPA theme pipeline.
+class Mcp::AuthorizationsController &lt; Doorkeeper::AuthorizationsController
+  layout false
+end</code></pre>
+
+<p>The pages now pull a small, curated set of CSS variables from the tenant theme. Rendering the full theme would mean around a hundred variables and would repaint the deliberately neutral Deny button. The details took longer than the feature:</p>
+
+<ul>
+  <li>White text on the Allow button failed WCAG AA contrast against the stock brand blue. The server now picks the more legible of white and near-black per tenant, and a spec asserts the 4.5 to 1 ratio.</li>
+  <li>Hover states are an inset overlay rather than a second brand color, so a single rule serves dark-on-light and light-on-dark brands.</li>
+  <li>Dark mode desaturated one tenant deep navy into grey, making Allow indistinguishable from Deny. Relative color syntax in oklch keeps the chroma, with server-computed fallbacks for browsers that lack it.</li>
+  <li>One brand font family has no 600 weight, and requesting a missing weight fails the entire Google Fonts stylesheet, not just that weight.</li>
+  <li>One tenant self-hosts its corporate font through the app bundler, which these standalone pages cannot reach. It degrades to the next family in the stack. Documented and accepted.</li>
+</ul>
+
+<pre><code class="language-css">/* Pull only what the page uses. Do not emit --secondary: it paints Deny. */
+:root {
+  --brand: &lt;%= theme.primary_color %>;
+  --brand-ink: &lt;%= contrast_ink(theme.primary_color) %>; /* white or near-black */
+  --brand-hover: oklch(from var(--brand) calc(l - 0.08) c h);
+}</code></pre>
+
+<pre><code class="language-ruby">def contrast_ink(hex)
+  contrast(hex, "#ffffff") >= 4.5 ? "#ffffff" : "#111111"
+end
+
+# Lato has no 600. Requesting it 400s the whole stylesheet.
+# fonts.googleapis.com/css2?family=Lato:wght@400;700</code></pre>
+
+<h2>Observability Is Three Jobs, Not One Table</h2>
+
+<p>Every tool call lands in a per-tenant audit table: tool name, data category, group id, success, duration. No arguments, no payloads. Unexpected errors go to Sentry. For a while I thought that covered observability. It covers forensics, which is a third of it.</p>
+
+<pre><code class="language-ruby"># 1. Forensics: tenant Postgres, every call, no arguments.
+McpAuditLog.create!(
+  tool_name:, data_category:, success:, duration_ms:,
+  group_public_id: group_public_id  # stays in the app DB
+)</code></pre>
+
+<p>The product side could not answer basic questions: which tenants connected a client, which clients, whether the feature flag converted into usage. That data lives in the product analytics pipeline and the warehouse, neither of which reads the application database. So the server now emits sparse analytics events on connector authorized and connector revoked (connector name and tool groups, no personal data), and the audit rows ride the existing daily export into the warehouse.</p>
+
+<pre><code class="language-ruby"># 2. Funnel: sparse product events, not per tool call.
+after_action :track_connector_authorized, only: :create
+
+def track_connector_authorized
+  Analytics.track("MCP Connector Authorized", {
+    connector_name: application.name,
+    tool_groups:    access_token.scopes.to_a
+  })
+end
+# Do not: Application.where("scopes LIKE '%mcp%'").count
+# DCR creates the row before anyone clicks Allow.</code></pre>
+
+<p>Two mistakes deliberately not made:</p>
+
+<ul>
+  <li><strong>No analytics event per tool call.</strong> One model turn fans out into several tool calls. Per-call events explode both the event volume and the bill, and the audit table already tells the per-call story.</li>
+  <li><strong>No exporting the group identifier unconditionally.</strong> It looks like an opaque id, but the field accepts custom strings, and some tenants fill it with the family name. An identifier that is sometimes a name is a name. It is nulled in the export unless the tenant has explicitly opted in to identified analytics.</li>
+</ul>
+
+<pre><code class="language-ruby"># 3. Warehouse: daily CSV, same path as the REST api_logs.
+def mcp_audit_logs_query
+  McpAuditLog.select(
+    :tool_name, :data_category, :success, :duration_ms,
+    (company.analytics_exports_include_public_id ? :group_public_id : "NULL")
+  )
+end</code></pre>
+
+<p>One measurement subtlety: counting connected connectors by querying OAuth application rows is not the same as tracking consent. An application exists from the moment of registration, before anyone clicks Allow, and revocation is a different verb from deletion. Track the authorize and revoke actions as events, not the rows.</p>
+
+<p>A Ruby-specific gap: Sentry publishes MCP instrumentation for Node and Python and nothing for Ruby, so tracing is hand-rolled. And because the rest of the app samples traces at 5 percent, the MCP endpoints need their own 100 percent sample rate or a handful of daily requests never shows up in a trace. That part is still on the to-do list.</p>
+
+<h2>Assorted Sharp Edges</h2>
+
+<ul>
+  <li><strong>The WAF ate the discovery endpoints.</strong> OAuth discovery lives under the well-known paths, which were not proxied to the app. The OAuth endpoints themselves were open; the well-known URLs are the ones that surprise you.</li>
+  <li><strong>Reflection-based tool discovery fights the autoloader.</strong> The catalog is built from subclass reflection, which needs an initializer to force-load tool files in development, which fights Zeitwerk. An explicit catalog list would also make adding a tool a visible line in a diff. Since adding a tool widens the authorization surface and invalidates every cached tool list, it deserves to be visible. It is still reflection today, and I mildly regret it every week.</li>
+  <li><strong>Clients send arguments as JSON null.</strong> Ruby keyword arguments do not love nil where a hash should be. Handle it explicitly, and name the spec after the reason it exists.</li>
+  <li><strong>Three tools logged an unknown data category</strong> because they never declared one, and the shared spec only asserted that a category was present. Tightening the assertion to an exact match is what found them.</li>
+  <li><strong>Tool-level failures were logged as successes</strong> because the audit logger checked that the call completed, not the error flag on the tool response.</li>
+  <li><strong>A one-shot data migration stayed in the tree after it ran.</strong> Once production used the new registration path it was dead weight, so it was deleted. Do not leave we-needed-this-once code in the migrations directory.</li>
+</ul>
+
+<p>Three of those, in code:</p>
+
+<pre><code class="language-text"># The WAF must forward these, not only /mcp and /mcp/oauth/*
+GET /.well-known/oauth-protected-resource
+GET /.well-known/oauth-authorization-server</code></pre>
+
+<pre><code class="language-ruby"># Today: descendants, plus an initializer that require-s every tool file.
+InternalTool.descendants
+
+# What I would rather ship: adding a tool is a line in a diff.
+CATALOG = %w[
+  ListAccessibleGroupsTool
+  GetEstateSummaryTool
+  QueryOwnershipTool
+].freeze</code></pre>
+
+<pre><code class="language-ruby">it "accepts arguments: nil (JSON null from the MCP client)" do
+  expect {
+    CallPlatformTool.call(tool_name: "list_accessible_groups", arguments: nil, server_context:)
+  }.not_to raise_error
+end</code></pre>
+
+<h2>What I Would Do Again</h2>
+
+<ul>
+  <li><strong>Fail closed, on the resource server, on every request.</strong> Feature flags, revocation, membership, suspension, grants. A check that only runs at the start of a flow is a comment, not a control.</li>
+  <li><strong>Put the grant on the token.</strong> If the UX is a consent screen, the lifetime is the token lifetime. A side table you can edit without re-consent is a different product.</li>
+  <li><strong>Trust the redirect host, never the client name.</strong> Open registration makes the name attacker-controlled.</li>
+  <li><strong>Skip the stateful transport.</strong> The notification it enables is ignored by the client that matters most. Stateless plus meta-tools works today; the cache hints cover the future.</li>
+  <li><strong>Treat the tool catalog as near-irreversible after the first connection.</strong> Client caches turn a bad catalog deploy into something you cannot roll back. Ship the taxonomy you actually want before anyone connects. I did not fully manage this, and I expect to pay for it.</li>
+  <li><strong>Keep personal data out of the warehouse by construction, not by review.</strong></li>
+  <li><strong>White-label the consent page.</strong> It is the one surface that is both outside the layout system and at the moment of maximum trust.</li>
+  <li><strong>Write the spec that would have caught the incident.</strong> The forged wider scope. The declined tool answering in the same words as a missing one. The feature flag cutting an already-issued token.</li>
+</ul>
+
+<p>Two of those specs, because they are the whole post in miniature:</p>
+
+<pre><code class="language-ruby">it "refuses a declined tool in the same words as a missing one" do
+  context = { granted_tools: ToolScopes.tools_for("mcp mcp:estate") }
+
+  declined = CallPlatformTool.call(tool_name: "get_aum_summary", server_context: context)
+  missing  = CallPlatformTool.call(tool_name: "does_not_exist",  server_context: context)
+
+  expect(error_message(declined).sub("get_aum_summary", "X"))
+    .to eq(error_message(missing).sub("does_not_exist", "X"))
+end
+
+it "cuts an already-issued token when the tenant flag is off" do
+  company.update!(mcp: false)
+
+  post "/mcp", headers: bearer(existing_token), params: initialize_payload
+
+  expect(response).to have_http_status(:forbidden)
+end</code></pre>
+
+<h2>What I Would Not Do Again</h2>
+
+<ul>
+  <li>Hand-roll OAuth next to a mature OAuth library.</li>
+  <li>Ship 23 REST-shaped list and detail tools and then invent a grouping layer to explain them on the consent screen. The groups were the taxonomy that should have shipped as the tools.</li>
+  <li>Enforce authorization through registration and then add a dispatcher that ignores the registration list.</li>
+  <li>Rescue StandardError and hand the message to a language model.</li>
+  <li>Assume PKCE is enforced because the initializer says so.</li>
+  <li>Assume the tenant context follows ActionController::Live onto the right database connection.</li>
+  <li>Assume revoke means the next token request will be refused.</li>
+</ul>
+
+<h2>Where It Stands</h2>
+
+<p>The server is live behind a per-tenant flag, with open questions I have not closed. Whether to collapse the granular tools into a handful of task-shaped ones before real usage makes the catalog immovable. Whether write tools can ever sit behind a dispatcher that erases per-tool consent prompts. Whether to embed a catalog fingerprint in every tool response, so a model can notice its own list is stale instead of politely reporting that a tool does not exist.</p>
+
+<p>If I had to compress the month into one sentence, it is this: every boundary you think you have (consent, revocation, feature flags, tool lists) is only real if it is enforced on the resource server, on every request, in the same words for every failure. Everything else is a drawing of a fence.</p>
+`,
+  },
+  {
     slug: 'github-history-trap-deleted-secrets',
     title: 'The "History" Trap: Why Your Deleted GitHub Secrets Aren\'t Actually Gone',
     excerpt: 'You pushed an API key by mistake, deleted it in the next commit, and thought you were safe. Wrong. Your secrets live forever in Git history, and attackers know exactly where to look.',

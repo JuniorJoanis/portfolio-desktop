@@ -82,6 +82,16 @@ Blog URL: https://joanis.co/blog
 
 ### Featured Articles
 
+#### SSO for Banks: SAML, OIDC, and the IdPs That Never Read the Spec
+URL: https://joanis.co/blog/shipping-sso-saml-oidc-banks
+Topics: Ruby on Rails, SSO, SAML, OIDC, Security, Banking
+Summary: Lessons from six months of enterprise SSO against bank identity providers: a unified SAML and OIDC login stack, a chained mutual-TLS OIDC dialect, idempotent handling of duplicate OAuth callbacks, keeping SAML assertions out of query strings, login CSRF hardening, and provisioning and certificate rotation as first-class parts of SSO.
+
+#### Shipping an MCP Server Into a Multi-Tenant Rails App
+URL: https://joanis.co/blog/shipping-mcp-server-multi-tenant-rails
+Topics: Ruby on Rails, MCP, OAuth2, Security, Multi-Tenancy, WealthTech
+Summary: The engineering story of putting a Model Context Protocol server in front of a multi-tenant Rails wealth platform: Doorkeeper OAuth with dynamic client registration and PKCE, a stateless transport, workarounds for client-side tool list caching, consent as a security boundary, and access controls enforced on every request.
+
 #### Building an AI Copilot for Accounts Receivable: A Technical Deep Dive
 URL: https://joanis.co/blog/building-ai-copilot-accounts-receivable
 Topics: Python, FastAPI, LangChain, AI, Gemini, React, FinTech
@@ -114,5 +124,5 @@ Available for:
 - Technical workshops on Ruby on Rails and React
 
 ## Last Updated
-2026-01-10
+2026-08-13
 
