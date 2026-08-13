@@ -31,16 +31,18 @@ const BlogLayout: React.FC<BlogLayoutProps> = ({ children }) => {
       <header className="sticky top-0 z-50 border-b border-stone-200/70 bg-[#FAFAF9]/85 backdrop-blur-xl">
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <Link to="/blog" className="flex items-center gap-3 group">
-              <img
-                src={BIO.avatarUrl}
-                alt={BIO.name}
-                className="w-8 h-8 rounded-lg object-cover"
-              />
-              <span className="text-lg font-medium text-stone-900 group-hover:text-stone-600 transition-colors" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            <div className="flex items-center gap-3">
+              <Link to="/" title="Back to home" aria-label="Back to home">
+                <img
+                  src={BIO.avatarUrl}
+                  alt={BIO.name}
+                  className="w-8 h-8 rounded-lg object-cover hover:opacity-80 transition-opacity"
+                />
+              </Link>
+              <Link to="/blog" className="text-lg font-medium text-stone-900 hover:text-stone-600 transition-colors" style={{ fontFamily: "'DM Sans', sans-serif" }}>
                 Blog
-              </span>
-            </Link>
+              </Link>
+            </div>
           </div>
 
           <nav className="flex items-center gap-1">

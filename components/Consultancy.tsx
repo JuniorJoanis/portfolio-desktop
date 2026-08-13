@@ -5,6 +5,7 @@ import {
   TESTIMONIALS, CASE_STUDIES, ABOUT, SOCIALS, NAV_LINKS, BIO, SOCIAL_PROOF_LOGOS,
 } from '@/constants';
 import { BLOG_POSTS } from '@/blogData';
+import { updateSEOMeta, SITE_URL } from '@/utils/seo';
 
 // Helper to get social URL by platform
 const getSocialUrl = (platform: string): string => {
@@ -113,6 +114,12 @@ function Navbar() {
                 {link.label}
               </button>
             ))}
+            <Link
+              to="/blog"
+              className="text-sm font-medium text-stone-500 hover:text-stone-900 transition-colors"
+            >
+              Blog
+            </Link>
           </div>
 
           {/* CTA */}
@@ -184,12 +191,6 @@ function HeroSection() {
         <div className="grid lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_400px] gap-12 lg:gap-14 items-center">
           {/* Left: copy */}
           <div className="max-w-2xl">
-            {/* Badge */}
-            <div className={`inline-flex items-center gap-2 bg-stone-100 border border-stone-200 text-stone-700 px-4 py-1.5 rounded-full text-sm font-medium mb-8 transition-all duration-700 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-              <FlaticonIcon name="fi-rr-bolt" size={14} />
-              MVP Delivery &middot; Legacy Rescue &middot; Production AI
-            </div>
-
             {/* Headline */}
             <h1 className={`text-4xl sm:text-5xl xl:text-6xl font-serif font-semibold tracking-tight text-stone-900 leading-[1.08] mb-6 transition-all duration-700 delay-100 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
               {HERO.headline}
@@ -690,9 +691,10 @@ function CaseStudiesSection() {
             const blogLabel = relatedPost ? `Read: ${relatedPost.title}` : `Explore ${fallbackTag} insights`;
 
             return (
-            <div
+            <Link
               key={cs.id}
-              className={`bg-white rounded-2xl p-6 sm:p-8 border border-stone-200/80 hover:border-stone-300/80 hover:shadow-md transition-all duration-500 ${
+              to={blogLink}
+              className={`group block bg-white rounded-2xl p-6 sm:p-8 border border-stone-200/80 hover:border-stone-400 hover:shadow-lg transition-all duration-500 ${
                 inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
               }`}
               style={{ transitionDelay: inView ? `${index * 100 + 200}ms` : '0ms' }}
@@ -733,18 +735,12 @@ function CaseStudiesSection() {
                 </ul>
               </div>
 
-              <div className="mt-4">
-                <a
-                  href={blogLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-start gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 transition-colors"
-                >
-                  <FlaticonIcon name="fi-rr-book-open-reader" size={14} className="mt-0.5 flex-shrink-0" />
-                  <span className="leading-snug text-left">{blogLabel}</span>
-                </a>
+              <div className="mt-4 flex items-start gap-2 text-sm font-medium text-stone-600 group-hover:text-stone-900 transition-colors">
+                <FlaticonIcon name="fi-rr-book-open-reader" size={14} className="mt-0.5 flex-shrink-0" />
+                <span className="leading-snug text-left">{blogLabel}</span>
+                <FlaticonIcon name="fi-rr-arrow-right" size={14} className="mt-0.5 flex-shrink-0 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
               </div>
-            </div>
+            </Link>
           );
           })}
         </div>
@@ -900,6 +896,15 @@ function Footer() {
 // ─── Main Consultancy Component ───────────────────────────────────────────────
 
 function Consultancy() {
+  useEffect(() => {
+    updateSEOMeta({
+      title: 'Junior Joanis | Fintech Systems, AI Agents & MVP Development for Startups',
+      description: 'I help startups and SMEs automate finance operations and ship AI-powered products, fast. Fintech systems, AI agents, accounts receivable automation, MVP development. Book a call.',
+      url: SITE_URL,
+      type: 'website',
+    });
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#FAFAF9] text-stone-900 selection:bg-stone-200 font-sans antialiased relative overflow-hidden bg-[radial-gradient(circle_at_18%_12%,rgba(168,162,158,0.22),transparent_55%),repeating-linear-gradient(0deg,rgba(168,162,158,0.08)_0,rgba(168,162,158,0.08)_1px,transparent_1px,transparent_36px),repeating-linear-gradient(90deg,rgba(168,162,158,0.08)_0,rgba(168,162,158,0.08)_1px,transparent_1px,transparent_36px),repeating-linear-gradient(0deg,rgba(168,162,158,0.14)_0,rgba(168,162,158,0.14)_1px,transparent_1px,transparent_180px),repeating-linear-gradient(90deg,rgba(168,162,158,0.14)_0,rgba(168,162,158,0.14)_1px,transparent_1px,transparent_180px)]">
       {/* Subtle ambient background */}
