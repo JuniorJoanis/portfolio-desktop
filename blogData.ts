@@ -12,6 +12,192 @@ export interface BlogPost {
 
 export const BLOG_POSTS: BlogPost[] = [
   {
+    slug: 'ci-job-ate-github-actions-bill',
+    title: 'The CI Job That Ate 80% of Our GitHub Actions Bill',
+    excerpt: 'The GitHub Actions quota ran out mid-month, and everyone wanted to shrink the big runner. I rebuilt the bill from raw timestamps instead, found one job behind 80 percent of it, and fixed it with better caching and four lines of YAML. CI came out faster and much cheaper.',
+    date: 'August 2026',
+    readTime: '8 min read',
+    tags: ['GitHub Actions', 'CI/CD', 'Ruby on Rails', 'RSpec', 'DevOps', 'Cost Optimization'],
+    featured: false,
+    resources: [
+      { title: 'About billing for GitHub Actions', url: 'https://docs.github.com/en/billing/managing-billing-for-your-products/managing-billing-for-github-actions/about-billing-for-github-actions' },
+      { title: 'GitHub Actions concurrency', url: 'https://docs.github.com/en/actions/using-jobs/using-concurrency' },
+      { title: 'actions/cache', url: 'https://github.com/actions/cache' },
+      { title: 'Vite Ruby', url: 'https://github.com/ElMassimo/vite_ruby' },
+      { title: 'parallel_tests', url: 'https://github.com/grosser/parallel_tests' },
+      { title: 'RuboCop result cache', url: 'https://docs.rubocop.org/rubocop/usage/caching.html' },
+      { title: 'TestProf', url: 'https://github.com/test-prof/test-prof' },
+    ],
+    content: `
+<h2>The Setup</h2>
+
+<p>One afternoon earlier this summer, one of my customers ran out of GitHub Actions minutes. The org quota was gone, pull requests were stuck in a queue, and the instinct in the room was the usual one: that 16-core runner looks expensive, shrink it.</p>
+
+<p>That would have been the wrong fix. This is the story of what I measured instead, the four changes that actually worked, and the tuning ideas the profiler killed. The numbers cover one month of a private Rails monorepo: about 3,300 workflow runs across roughly 80 workflows.</p>
+
+<p><em>One honest note before the numbers: to keep the customer anonymous, the figures in this post are lightly rounded. The proportions, and every lesson drawn from them, are the real ones.</em></p>
+
+<h2>How GitHub Bills CI, in One Paragraph</h2>
+
+<p>GitHub charges per job, per minute. Every job is rounded up to the next full minute, and bigger runners multiply the price: a 2-core machine bills at the base rate, a 16-core machine bills every minute at 8 times that rate. GitHub's reporting would not break any of this down for me (the usage endpoint literally returned zeros for this repo), so I rebuilt the bill from raw job timestamps: duration, rounded up, times the multiplier of the runner it ran on.</p>
+
+<p>The month came to about 26,000 minutes of actual runner time, but nearly 90,000 billed minutes once rounding and multipliers were applied. One job dominated:</p>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>Job</th><th>Runner</th><th>Billed minutes</th><th>Share</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Test (the Rails suite)</td><td>16-core, 8x</td><td>~71,000</td><td>80%</td></tr>
+    <tr><td>Lint</td><td>2-core</td><td>~4,000</td><td>4.5%</td></tr>
+    <tr><td>Security and license checks</td><td>2-core</td><td>~4,000</td><td>4.5%</td></tr>
+    <tr><td>JS tests, builds, and a PR bot</td><td>2-core</td><td>~3,200</td><td>3.5%</td></tr>
+    <tr><td>Everything else (deploys, Playwright, automation)</td><td>mixed</td><td>~6,400</td><td>7%</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>One job, on the big runner, was 80 percent of the bill. It ran over a thousand times that month at about eight and a half minutes per run, and every one of those minutes was billed eight times over. Nothing else was worth touching first.</p>
+
+<p>One more number set the urgency: a single busy day burned nearly 10,000 billed minutes, more than a tenth of the whole month. Keep that in mind for the first fix.</p>
+
+<h2>The Expensive Job Was Half Setup</h2>
+
+<p>Timing the steps inside the Test job across 40 runs:</p>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>Step</th><th>Average</th><th>Uses the 16 cores?</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Running the tests (16 parallel rspec workers)</td><td>~280s</td><td>yes</td></tr>
+    <tr><td>Creating databases and compiling assets</td><td>~110s</td><td>no</td></tr>
+    <tr><td>Checkout, Ruby, Node, containers, cache steps</td><td>~60s</td><td>barely</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>Forty percent of the job is setup work that a single core could do just as well, billed at 8x. The database-and-assets step alone came to roughly 15,000 billed minutes a month. That reframes the whole problem: nobody was overpaying for tests. They were overpaying for database creation and asset compilation, run on a machine priced for parallel work.</p>
+
+<p>That is the entire economics of big CI runners. They are cheap when the work spreads across the cores, and painfully expensive when it does not.</p>
+
+<h2>Fix 1: Stop Testing Code Nobody Will Merge</h2>
+
+<p>Not one of the repo's workflows declared a concurrency group. Push twice to the same PR and the first run kept going to the end, testing a commit that no longer mattered. I counted more than 130 completed runs nobody would ever read, roughly 9,500 billed minutes. One busy branch alone piled up more than 40 of them. About 11 percent of the month, spent validating dead code.</p>
+
+<p>The fix is four lines per workflow:</p>
+
+<pre><code class="language-yaml">concurrency:
+  group: \${{ github.workflow }}-\${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true</code></pre>
+
+<p>On a pull request, a new push now cancels the run for the previous push. The fallback is the part worth copying carefully. Most tutorials group on <code>github.ref</code>, but this repo has production deploys that wait on a manual approval, and grouping on ref would let a merge to main cancel a deploy mid-approval. Falling back to the run id means runs on main, schedules, and manual dispatches each get their own group and are never cancelled.</p>
+
+<p>I tested it on a throwaway branch before rolling it out to the seventy-odd workflows that run on pushes and pull requests. The few reusable and schedule-only workflows were deliberately left alone: they either cancel with their caller already, or finish in a minute and have nothing worth recovering. And the outdated run reports as cancelled, not failed, so branch protection does not notice anything.</p>
+
+<h2>Fix 2: The Cache Hit That Rebuilt Everything Anyway</h2>
+
+<p>The Test job already cached its compiled assets, and the logs looked healthy:</p>
+
+<pre><code class="language-text">Cache hit for: assets-cache-1a2b3c4d...
+Cache restored successfully
+...
+Building with Vite
+3480 modules transformed.</code></pre>
+
+<p>An exact cache hit, 1.3 GB restored, and Vite rebuilt everything anyway. On every run. Here is the catch: a cache hit only means GitHub found an entry for your key. Whether the build is skipped is decided by the tool, and Vite keeps its own freshness digest over the files it watches. The cache key hashed a different set of files than Vite watches, so the restored digest almost never matched the current code, and Vite rebuilt from scratch while the logs said hit.</p>
+
+<p>Worse, the cache saved the entire <code>tmp</code> directory after the tests had run, so each 1.3 GB entry was mostly junk. About 70 MB of it was ever useful. The junk pushed the repo past GitHub's 10 GB cache limit, and GitHub responded by evicting other caches, including the perfectly good dependency ones.</p>
+
+<p>The fix: key the cache on the same files Vite checks, and store only the three folders the next run reads.</p>
+
+<pre><code class="language-yaml">- uses: actions/cache@v4
+  with:
+    path: |
+      tmp/cache/assets
+      tmp/cache/vite
+      public/assets
+    key: assets-\${{ hashFiles('app/frontend/**', 'config/vite.*',
+      'package.json', 'yarn.lock', 'vite.config.mts') }}</code></pre>
+
+<p>The rebuild now genuinely skips. That is about a minute off every run of the 8x job, roughly 8,000 to 10,000 billed minutes a month, and the cache entry shrank from 1.3 GB to 70 MB.</p>
+
+<p>A reviewer then caught the subtle part. Tailwind scans the server-rendered view folders for CSS class names, and Vite does not watch those folders. While the cache was broken, the gap was invisible, because everything rebuilt anyway. With caching fixed, a view-only change could skip the build and ship test CSS missing the new classes. The fix went into Vite's watched paths, not into the cache key, because the watched paths are what the skip decision actually reads. The lesson in one line: cache what the tool checks, not what looks related.</p>
+
+<h2>Fix 3: Sixteen Workers, Fifteen of Them Waiting</h2>
+
+<p>Inside the test step, the suite splits spec files across 16 parallel workers. By default it splits by file size, and file size is a poor guess for how long a file really takes. In one measured run, the fastest worker finished in about 135 seconds, the slowest took about 305, and the job is only done when the slowest worker is:</p>
+
+<pre><code class="language-text">grouped by file size                      grouped by recorded runtime
+
+fastest   ██████████░░░░░░░░░░░░  ~135s    ███████████████████  ~240s
+median    ████████████████░░░░░░  ~215s    ███████████████████  ~240s
+slowest   ██████████████████████  ~305s    ███████████████████  ~245s
+                          ↑
+          a 90 second tail where fifteen
+          16-core workers wait for one fat file</code></pre>
+
+<p>The tool can split by real timings instead. Record how long each file takes on main, cache that log, and <code>parallel_tests</code> switches to runtime grouping automatically. After the change, the test step settled around 240 seconds instead of 340. Call it 90 seconds off every run, billed at 8x. One warning worth writing in the PR description: the first run after merging still splits by file size while it records the timings, so the win only shows up from the second run on.</p>
+
+<h2>Fix 4: Let RuboCop Remember</h2>
+
+<p>After Test, the Lint job was next in line. RuboCop ships with a result cache keyed on its own version, the config, and each file's checksum. CI was simply never saving it, so every run re-inspected nearly 4,000 files from scratch. Restoring that cache from main dropped the lint step from about two minutes to four seconds. And it cannot lie: a changed file misses its checksum and gets re-inspected, so a stale cache can only make the run slower, never wrong.</p>
+
+<h2>Why Not Just Shrink the Runner?</h2>
+
+<p>Back to the room's first instinct. The tests scale almost linearly with cores, so a smaller runner means proportionally slower tests at a proportionally lower rate: nearly the same bill, much slower CI. Only the serial setup gets genuinely cheaper on a small machine, and the fixes above removed most of that setup anyway. Modelled from the measured baseline:</p>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>Runner</th><th>Tests</th><th>Setup</th><th>Wall clock</th><th>Billed per run</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>16-core, as found</td><td>4.7m</td><td>3.1m</td><td>7.9m</td><td>63 min</td></tr>
+    <tr><td>8-core</td><td>9.4m</td><td>2.8m</td><td>12.2m</td><td>49 min</td></tr>
+    <tr><td>4-core</td><td>18.8m</td><td>2.5m</td><td>21.3m</td><td>43 min</td></tr>
+    <tr><td>16-core, setup fixed</td><td>4.7m</td><td>1.2m</td><td>5.9m</td><td>47 min</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>The last row is the point. Fixing the setup saves about as much as dropping to 4 cores, except CI gets two minutes faster instead of nearly three times slower. Developers feel wall clock. Finance feels billed minutes. This is the rare fix that improves both. The runner size never changed.</p>
+
+<h2>What Did Not Survive the Profiler</h2>
+
+<p>Two popular optimizations went in with high hopes and came out humbled.</p>
+
+<p>Putting the test database in RAM (Postgres on tmpfs, durability off) is standard CI advice, and on a pure write benchmark it measured 32 percent faster. On the real suite: 4 percent. The reason is that the suite wraps every test in a transaction and rolls it back, and rollbacks barely touch the durability machinery I had switched off. I kept the change because it is free, but the profiler was blunt about where the time really goes: not the database, which was handling ten thousand transactions a second without breaking a sweat, but Ruby itself. Model callbacks, validations, and factories that create three records to hand you one.</p>
+
+<p>A factory-caching upgrade told the same story. It fixed a real correctness bug in an outdated dependency and moved total runtime by nothing measurable. The one test-suite change that did pay was hoisting shared records out of per-test setup with <code>let_it_be</code> in the six slowest files: 20 percent off those files, applied carefully, because shared records and multi-tenant code are a delicate mix.</p>
+
+<p>There is also a small tax I chose not to fight yet. GitHub rounds every job up to a full minute, and about 5,700 tiny jobs (bots that assign reviewers or post to Slack) each billed a full minute for a few seconds of work, nearly 9,000 minutes of pure round-up. Real money, but the 8x job was twenty times bigger. Measuring first also tells you what not to fix yet.</p>
+
+<h2>The Scoreboard</h2>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>Change</th><th>Result</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Cancel outdated PR runs, repo-wide</td><td>About 11 percent of the month recovered</td></tr>
+    <tr><td>Assets cache keyed on what Vite checks</td><td>8,000 to 10,000 billed minutes a month</td></tr>
+    <tr><td>Split test files by real runtimes</td><td>90 seconds off every run of the 8x job</td></tr>
+    <tr><td>RuboCop result cache</td><td>Lint step from about two minutes to four seconds</td></tr>
+    <tr><td>Postgres in RAM</td><td>An honest 4 percent</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>Billed minutes are down by about a third, each PR gets its answer roughly two minutes sooner, and the 16-core runner is still there, now spending its time on work that actually uses 16 cores.</p>
+
+<p>If your quota runs out some afternoon, here is the playbook: rebuild the bill from timestamps before touching anything, cancel work nobody will read, cache what the tools actually check, and only then argue about runner sizes. The expensive part is rarely where the room thinks it is.</p>
+`,
+  },
+  {
     slug: 'shipping-sso-saml-oidc-banks',
     title: 'SSO for Banks: SAML, OIDC, and the IdPs That Never Read the Spec',
     excerpt: 'Six months of enterprise SSO against bank identity providers: chained token exchanges over mTLS, single-use codes that browsers redeem twice, assertions stuffed into query strings, and why the login page is part of the protocol.',
@@ -709,7 +895,7 @@ end</code></pre>
     content: `
 <h2>We've All Been There</h2>
 
-<p>You're in a flow, you hardcode an API key for a quick test, and—oops—you push it to GitHub. You realize the mistake, delete the key from your code, and push a second commit. Problem solved, right?</p>
+<p>You're in a flow, you hardcode an API key for a quick test, and, oops, you push it to GitHub. You realize the mistake, delete the key from your code, and push a second commit. Problem solved, right?</p>
 
 <p><strong>Wrong.</strong></p>
 
@@ -719,7 +905,7 @@ end</code></pre>
 
 <h2>How the "History" Button Becomes a Security Leak</h2>
 
-<p>GitHub is built on Git, a version control system designed <em>never to lose anything</em>. When someone clicks the <strong>"History"</strong> button on one of your files, they aren't just looking at past versions—they're looking at <strong>every state that file has ever existed in</strong>.</p>
+<p>GitHub is built on Git, a version control system designed <em>never to lose anything</em>. When someone clicks the <strong>"History"</strong> button on one of your files, they aren't just looking at past versions. They're looking at <strong>every state that file has ever existed in</strong>.</p>
 
 <p>An attacker doesn't need to find the key in your current code. They just look for commits with messages like:</p>
 
@@ -758,7 +944,7 @@ end</code></pre>
 
 <h3>2. Master the .gitignore</h3>
 
-<p>Before you write your first line of code, create a <code>.gitignore</code> file. This is your first line of defense—it tells Git to completely ignore sensitive files.</p>
+<p>Before you write your first line of code, create a <code>.gitignore</code> file. This is your first line of defense: it tells Git to completely ignore sensitive files.</p>
 
 <pre><code class="language-bash"># Environment files
 .env
@@ -874,6 +1060,7 @@ const stripeKey = await getSecret('my-gcp-project', 'stripe-api-key');</code></p
 
 <h3>Why Managed Secrets Beat Environment Variables</h3>
 
+<div class="table-wrap">
 <table>
   <thead>
     <tr>
@@ -910,6 +1097,7 @@ const stripeKey = await getSecret('my-gcp-project', 'stripe-api-key');</code></p
     </tr>
   </tbody>
 </table>
+</div>
 
 <p><strong>Pro tip:</strong> Use environment variables for local development and managed secrets for staging/production. Most SDKs support falling back gracefully:</p>
 
@@ -963,7 +1151,7 @@ git filter-repo --replace-text expressions.txt</code></pre>
 <pre><code class="language-bash">git push origin --force --all
 git push origin --force --tags</code></pre>
 
-<p><strong>Warning:</strong> Force pushing rewrites history for everyone. If you're working on a team, coordinate first—they'll need to re-clone or carefully rebase their local copies.</p>
+<p><strong>Warning:</strong> Force pushing rewrites history for everyone. If you're working on a team, coordinate first, because they'll need to re-clone or carefully rebase their local copies.</p>
 
 <h3>Step 4: Clear GitHub's Caches</h3>
 
@@ -973,6 +1161,7 @@ git push origin --force --tags</code></pre>
 
 <p>Here's your security checklist to prevent and handle leaked secrets:</p>
 
+<div class="table-wrap">
 <table>
   <thead>
     <tr>
@@ -1003,15 +1192,16 @@ git push origin --force --tags</code></pre>
     </tr>
   </tbody>
 </table>
+</div>
 
 <h2>Tools That Have Your Back</h2>
 
 <p>Beyond GitHub's built-in features, consider these additional layers of protection:</p>
 
 <ul>
-  <li><strong><a href="https://github.com/trufflesecurity/trufflehog" target="_blank">TruffleHog</a></strong> — Scans your entire Git history for secrets. Great for auditing existing repos.</li>
-  <li><strong><a href="https://github.com/gitleaks/gitleaks" target="_blank">Gitleaks</a></strong> — Fast secret scanner that integrates with CI/CD pipelines.</li>
-  <li><strong><a href="https://pre-commit.com/" target="_blank">pre-commit hooks</a></strong> — Block commits containing secrets before they even reach your local history.</li>
+  <li><strong><a href="https://github.com/trufflesecurity/trufflehog" target="_blank">TruffleHog</a></strong>: Scans your entire Git history for secrets. Great for auditing existing repos.</li>
+  <li><strong><a href="https://github.com/gitleaks/gitleaks" target="_blank">Gitleaks</a></strong>: Fast secret scanner that integrates with CI/CD pipelines.</li>
+  <li><strong><a href="https://pre-commit.com/" target="_blank">pre-commit hooks</a></strong>: Block commits containing secrets before they even reach your local history.</li>
 </ul>
 
 <p>Example pre-commit configuration:</p>
@@ -1025,22 +1215,22 @@ repos:
 
 <h2>The Bottom Line</h2>
 
-<p>Git never forgets. What feels like a quick delete is really just hiding your secret in plain sight. Every commit, every diff, every branch—they're all permanent records that anyone can browse.</p>
+<p>Git never forgets. What feels like a quick delete is really just hiding your secret in plain sight. Every commit, every diff, every branch: they're all permanent records that anyone can browse.</p>
 
-<p>The solution isn't paranoia—it's process:</p>
+<p>The solution isn't paranoia. It's process:</p>
 
 <ol>
-  <li><strong>Enable <a href="https://docs.github.com/en/code-security/concepts/secret-security/about-push-protection" target="_blank">Push Protection</a></strong> — Let GitHub catch mistakes before they become incidents</li>
-  <li><strong>Configure .gitignore properly</strong> — Keep sensitive files out of version control entirely</li>
-  <li><strong>Use environment variables</strong> — Separate secrets from code by design</li>
-  <li><strong>Audit existing repos</strong> — You might be surprised what's lurking in your history</li>
+  <li><strong>Enable <a href="https://docs.github.com/en/code-security/concepts/secret-security/about-push-protection" target="_blank">Push Protection</a></strong>: Let GitHub catch mistakes before they become incidents</li>
+  <li><strong>Configure .gitignore properly</strong>: Keep sensitive files out of version control entirely</li>
+  <li><strong>Use environment variables</strong>: Separate secrets from code by design</li>
+  <li><strong>Audit existing repos</strong>: You might be surprised what's lurking in your history</li>
 </ol>
 
 <p>Don't let your commit history become a roadmap for hackers. Check your history, turn on push protection, and keep your secrets where they belong: <strong>out of your code</strong>.</p>
 
 <hr />
 
-<p><em>Have you found secrets in someone's public repo? Or had to clean up a leak yourself? The experience is more common than people admit—and sharing these stories helps the community learn.</em></p>
+<p><em>Have you found secrets in someone's public repo? Or had to clean up a leak yourself? The experience is more common than people admit, and sharing these stories helps the community learn.</em></p>
     `.trim(),
   },
   {
@@ -1064,13 +1254,13 @@ repos:
 
 <p>At <a href="https://delfyn.co" target="_blank">Delfyn</a>, we asked ourselves: <strong>what if an AI could handle the tedious coordination work while keeping humans in control of the decisions that matter?</strong></p>
 
-<p>This post is a deep dive into how we built that AI copilot—the architecture decisions, the hard-won lessons, and the patterns that made it all work. If you're building AI agents for enterprise workflows, you'll find battle-tested approaches you can steal.</p>
+<p>This post is a deep dive into how we built that AI copilot: the architecture decisions, the hard-won lessons, and the patterns that made it all work. If you're building AI agents for enterprise workflows, you'll find battle-tested approaches you can steal.</p>
 
 <p><strong>Our stack:</strong> Python, FastAPI, LangChain, Google Vertex AI (Gemini 3), Redis, SQLAlchemy, and <a href="https://www.assistant-ui.com/" target="_blank">assistant-ui</a> for the React frontend.</p>
 
 <h2>Architecture Overview: Teaching an AI to Think and Act</h2>
 
-<p>We didn't just build a chatbot—we built a <strong>reasoning agent</strong> that can orchestrate complex workflows. Think of it as giving the LLM a Swiss Army knife of 25+ specialized tools and teaching it when to use each one.</p>
+<p>We didn't just build a chatbot. We built a <strong>reasoning agent</strong> that can orchestrate complex workflows. Think of it as giving the LLM a Swiss Army knife of 25+ specialized tools and teaching it when to use each one.</p>
 
 <p>The secret sauce? A pattern called <strong>ReAct</strong> (Reasoning + Acting) that lets the agent think through problems step-by-step while pulling real data from our backend.</p>
 
@@ -1081,13 +1271,13 @@ repos:
 <p>The framework, introduced by Yao et al. in 2022, has the model alternate between thinking and doing:</p>
 
 <ol>
-  <li><strong>Reasoning traces</strong> — The model explains its thinking out loud. "The user wants overdue invoices for Acme Corp. I should first check if that company exists in our system..." This makes debugging a dream and builds trust with finance teams who can see exactly why the AI made each recommendation.</li>
-  <li><strong>Grounded actions</strong> — Instead of guessing, the agent calls our APIs to get real numbers. No more hallucinated invoice amounts or made-up customer emails.</li>
+  <li><strong>Reasoning traces</strong>: The model explains its thinking out loud. "The user wants overdue invoices for Acme Corp. I should first check if that company exists in our system..." This makes debugging a dream and builds trust with finance teams who can see exactly why the AI made each recommendation.</li>
+  <li><strong>Grounded actions</strong>: Instead of guessing, the agent calls our APIs to get real numbers. No more hallucinated invoice amounts or made-up customer emails.</li>
 </ol>
 
 <p>This combination is <em>essential</em> for financial operations. When someone asks "Should we offer Acme Corp a discount?", the agent needs both <strong>judgment</strong> (understanding the business context) and <strong>accuracy</strong> (knowing their exact outstanding balance is $47,832.50, not "around $50k").</p>
 
-<p><strong>The payoff:</strong> Finance teams can see the agent's reasoning chain. When it suggests sending a payment reminder, they know <em>why</em>—building the kind of trust that enterprise customers demand.</p>
+<p><strong>The payoff:</strong> Finance teams can see the agent's reasoning chain. When it suggests sending a payment reminder, they know <em>why</em>, which builds the kind of trust that enterprise customers demand.</p>
 
 <pre><code>┌─────────────────────────────────────────────────────────────────────────────┐
 │                         HIGH-LEVEL ARCHITECTURE                             │
@@ -1152,10 +1342,10 @@ repos:
 <p><strong>Why these specific choices?</strong></p>
 
 <ul>
-  <li><strong>Temperature 0.3</strong> — This is our "Goldilocks zone." Too low (0.1) and the agent sounds robotic, repeating canned phrases. Too high (0.7+) and it starts getting creative with numbers—terrifying for financial data. 0.3 keeps responses natural while ensuring invoice amounts aren't hallucinated.</li>
-  <li><strong>Streaming enabled</strong> — Nobody wants to stare at a spinner for 15 seconds. Streaming lets users see the agent "thinking" in real-time, which dramatically improves perceived performance.</li>
-  <li><strong>JSON response format</strong> — Forces structured outputs that our tool orchestration can reliably parse. No more regex gymnastics to extract function calls.</li>
-  <li><strong>Session-based memory</strong> — Every user conversation is isolated. When CFO Alice asks about overdue invoices, she won't accidentally see collections data from CFO Bob's session.</li>
+  <li><strong>Temperature 0.3</strong>: This is our "Goldilocks zone." Too low (0.1) and the agent sounds robotic, repeating canned phrases. Too high (0.7+) and it starts getting creative with numbers, which is terrifying for financial data. 0.3 keeps responses natural while ensuring invoice amounts aren't hallucinated.</li>
+  <li><strong>Streaming enabled</strong>: Nobody wants to stare at a spinner for 15 seconds. Streaming lets users see the agent "thinking" in real-time, which dramatically improves perceived performance.</li>
+  <li><strong>JSON response format</strong>: Forces structured outputs that our tool orchestration can reliably parse. No more regex gymnastics to extract function calls.</li>
+  <li><strong>Session-based memory</strong>: Every user conversation is isolated. When CFO Alice asks about overdue invoices, she won't accidentally see collections data from CFO Bob's session.</li>
 </ul>
 
 <h3>ReAct Reasoning Loop</h3>
@@ -1213,7 +1403,7 @@ repos:
 
 <h2>2. Tool Architecture: The Agent's Swiss Army Knife</h2>
 
-<p>We empowered our agent with 25+ specialized tools—each one a surgical instrument for a specific AR task. The goal: let the agent handle <em>any</em> workflow a collections specialist might need, from gentle payment reminders to escalated dunning sequences.</p>
+<p>We empowered our agent with 25+ specialized tools, each one a surgical instrument for a specific AR task. The goal: let the agent handle <em>any</em> workflow a collections specialist might need, from gentle payment reminders to escalated dunning sequences.</p>
 
 <pre><code class="language-python">def get_tools(self):
     tools = [
@@ -1254,12 +1444,12 @@ repos:
 <p><strong>We organized tools into six capability domains:</strong></p>
 
 <ul>
-  <li><strong>Buyer management</strong> — The agent's "CRM brain": fetch customer details, update records, list accounts</li>
-  <li><strong>Invoice operations</strong> — Core AR functionality: retrieve invoices, apply discounts, track statuses</li>
-  <li><strong>Communication</strong> — The agent's voice: draft emails, send messages, review correspondence history</li>
-  <li><strong>Reporting</strong> — Instant insights: AR prioritization, payment trends, overdue analysis (no more Excel gymnastics)</li>
-  <li><strong>Payment operations</strong> — Close the loop: generate payment links, adjust terms, track collections</li>
-  <li><strong>Dunning sequences</strong> — Automated escalation: add customers to reminder flows, pause sequences, track progress</li>
+  <li><strong>Buyer management</strong>, the agent's "CRM brain": fetch customer details, update records, list accounts</li>
+  <li><strong>Invoice operations</strong>, core AR functionality: retrieve invoices, apply discounts, track statuses</li>
+  <li><strong>Communication</strong>, the agent's voice: draft emails, send messages, review correspondence history</li>
+  <li><strong>Reporting</strong>, instant insights: AR prioritization, payment trends, overdue analysis (no more Excel gymnastics)</li>
+  <li><strong>Payment operations</strong>, close the loop: generate payment links, adjust terms, track collections</li>
+  <li><strong>Dunning sequences</strong>, automated escalation: add customers to reminder flows, pause sequences, track progress</li>
 </ul>
 
 <pre><code>┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
@@ -1329,15 +1519,15 @@ repos:
 <p><strong>Why this matters:</strong></p>
 
 <ul>
-  <li><strong>Security</strong> — Auth tokens are injected at runtime, never exposed to the LLM or logged in tool descriptions</li>
-  <li><strong>Testability</strong> — Tools are pure functions; mock the config and test in isolation</li>
-  <li><strong>Clean introspection</strong> — LangChain sees only the parameters the LLM should control (like <code>buyer_company_name</code>)</li>
-  <li><strong>Flexibility</strong> — Same tool works with different auth contexts for different users/tenants</li>
+  <li><strong>Security</strong>: Auth tokens are injected at runtime, never exposed to the LLM or logged in tool descriptions</li>
+  <li><strong>Testability</strong>: Tools are pure functions; mock the config and test in isolation</li>
+  <li><strong>Clean introspection</strong>: LangChain sees only the parameters the LLM should control (like <code>buyer_company_name</code>)</li>
+  <li><strong>Flexibility</strong>: Same tool works with different auth contexts for different users/tenants</li>
 </ul>
 
 <h2>4. Prompt Engineering: Teaching Financial Fluency</h2>
 
-<p>Here's where we spent <em>weeks</em> iterating. The prompt isn't just instructions—it's the agent's training manual, guardrails, and personality all in one. Get it wrong, and you have an agent that confuses "overdue" with "outstanding" (a $100K mistake waiting to happen).</p>
+<p>Here's where we spent <em>weeks</em> iterating. The prompt isn't just instructions. It's the agent's training manual, guardrails, and personality all in one. Get it wrong, and you have an agent that confuses "overdue" with "outstanding" (a $100K mistake waiting to happen).</p>
 
 <pre><code class="language-python">class InvoiceTemplate:
     def generate_prompt(self):
@@ -1387,15 +1577,15 @@ repos:
 <p><strong>The non-obvious lessons we learned:</strong></p>
 
 <ul>
-  <li><strong>Terminology is treacherous</strong> — We explicitly define "overdue" vs "outstanding" vs "late payment" because these mean different things in AR, and LLMs love to conflate them. One wrong term in a customer email destroys credibility.</li>
-  <li><strong>Workflow enforcement prevents disasters</strong> — "Get buyer info BEFORE drafting emails" seems obvious, but without explicit guardrails, the agent would happily draft emails with [PLACEHOLDER] where the payment link should be.</li>
-  <li><strong>Confirmation gates build trust</strong> — The agent asks for human approval before sending emails. This isn't just safety—it's what enterprise buyers demand. Nobody wants an AI sending collections emails autonomously.</li>
-  <li><strong>Table formatting isn't vanity</strong> — Finance people think in tables. When we switched from paragraph-style answers to tabular data, user satisfaction jumped noticeably.</li>
+  <li><strong>Terminology is treacherous</strong>: We explicitly define "overdue" vs "outstanding" vs "late payment" because these mean different things in AR, and LLMs love to conflate them. One wrong term in a customer email destroys credibility.</li>
+  <li><strong>Workflow enforcement prevents disasters</strong>: "Get buyer info BEFORE drafting emails" seems obvious, but without explicit guardrails, the agent would happily draft emails with [PLACEHOLDER] where the payment link should be.</li>
+  <li><strong>Confirmation gates build trust</strong>: The agent asks for human approval before sending emails. This isn't just safety. It's what enterprise buyers demand. Nobody wants an AI sending collections emails autonomously.</li>
+  <li><strong>Table formatting isn't vanity</strong>: Finance people think in tables. When we switched from paragraph-style answers to tabular data, user satisfaction jumped noticeably.</li>
 </ul>
 
 <h2>5. Agent Executor: Orchestrating the Symphony</h2>
 
-<p>All the pieces come together in the executor—the conductor that coordinates reasoning, tool calls, memory, and error handling into a coherent workflow.</p>
+<p>All the pieces come together in the executor: the conductor that coordinates reasoning, tool calls, memory, and error handling into a coherent workflow.</p>
 
 <pre><code class="language-python">def handle_chatbot_input(input: Input) -> Tuple[Output, AgentExecutor, Dict]:
     last_message = input.messages[-1]
@@ -1442,10 +1632,10 @@ repos:
 <p><strong>What the executor handles for us:</strong></p>
 
 <ul>
-  <li><strong>Tool orchestration</strong> — Parses the agent's "Action" outputs, calls the right tool, feeds results back</li>
-  <li><strong>Graceful error recovery</strong> — When a tool fails (API timeout, invalid input), the agent gets a chance to reason about the error and try a different approach</li>
-  <li><strong>Memory persistence</strong> — Automatically saves conversation state after each turn</li>
-  <li><strong>Debugging gold</strong> — <code>return_intermediate_steps=True</code> gives us the full reasoning trace. When something goes wrong, we can see exactly where the agent's logic derailed.</li>
+  <li><strong>Tool orchestration</strong>: Parses the agent's "Action" outputs, calls the right tool, feeds results back</li>
+  <li><strong>Graceful error recovery</strong>: When a tool fails (API timeout, invalid input), the agent gets a chance to reason about the error and try a different approach</li>
+  <li><strong>Memory persistence</strong>: Automatically saves conversation state after each turn</li>
+  <li><strong>Debugging gold</strong>: <code>return_intermediate_steps=True</code> gives us the full reasoning trace. When something goes wrong, we can see exactly where the agent's logic derailed.</li>
 </ul>
 
 <h2>6. Memory Architecture: The Agent's Recall System</h2>
@@ -1524,9 +1714,9 @@ repos:
 <p><strong>Why this split architecture matters:</strong></p>
 
 <ul>
-  <li><strong>Chat history</strong> — Lightweight conversational context. "User asked about Acme Corp's overdue invoices. I showed them a table..."</li>
-  <li><strong>Tool history</strong> — The actual data, available for reference without cluttering the dialogue. The agent can say "As I showed you earlier, Acme has 3 overdue invoices totaling $47K" without re-fetching.</li>
-  <li><strong>24-hour TTL</strong> — Sessions expire automatically. No stale data, no privacy leaks between days.</li>
+  <li><strong>Chat history</strong>: Lightweight conversational context. "User asked about Acme Corp's overdue invoices. I showed them a table..."</li>
+  <li><strong>Tool history</strong>: The actual data, available for reference without cluttering the dialogue. The agent can say "As I showed you earlier, Acme has 3 overdue invoices totaling $47K" without re-fetching.</li>
+  <li><strong>24-hour TTL</strong>: Sessions expire automatically. No stale data, no privacy leaks between days.</li>
 </ul>
 
 <p>Think of it like human memory: you remember the <em>gist</em> of conversations (chat history) but can pull up specific documents when needed (tool history).</p>
@@ -1553,7 +1743,7 @@ repos:
 
 <h2>7. Streaming Responses: The "Thinking Out Loud" UX</h2>
 
-<p>Nobody wants to stare at a loading spinner for 10 seconds wondering if the app crashed. <strong>Streaming transforms the experience</strong>—users see the agent working in real-time, building trust and reducing perceived latency.</p>
+<p>Nobody wants to stare at a loading spinner for 10 seconds wondering if the app crashed. <strong>Streaming transforms the experience</strong>: users see the agent working in real-time, building trust and reducing perceived latency.</p>
 
 <p>But here's the twist: we don't just stream text. We stream <em>what the agent is doing</em>.</p>
 
@@ -1593,7 +1783,7 @@ async def invoke_chatbot_stream(input: Input):
     metadata={"visual_explainer": "Getting customer information"}  # UI shows this
 )</code></pre>
 
-<p>While the API fetches data, users see <em>"Getting customer information..."</em> instead of nothing. When the agent creates a payment link, they see <em>"Creating payment link..."</em> It's like watching someone work—you know things are happening.</p>
+<p>While the API fetches data, users see <em>"Getting customer information..."</em> instead of nothing. When the agent creates a payment link, they see <em>"Creating payment link..."</em> It's like watching someone work: you know things are happening.</p>
 
 <p><strong>The impact:</strong> Complaints about "slow responses" dropped dramatically, even though the actual latency didn't change. Perception is reality in UX.</p>
 
@@ -1676,16 +1866,16 @@ async def invoke_chatbot_stream(input: Input):
 <p><strong>The suggestions are smart, not random.</strong> After showing overdue invoices, the agent might suggest:</p>
 
 <ul>
-  <li><em>"Send reminder emails to these customers"</em> — The obvious action</li>
-  <li><em>"Apply a 2% early payment discount"</em> — A strategic option for high-value accounts</li>
-  <li><em>"Show me payment trends for last quarter"</em> — Context for decision-making</li>
+  <li><em>"Send reminder emails to these customers"</em>: The obvious action</li>
+  <li><em>"Apply a 2% early payment discount"</em>: A strategic option for high-value accounts</li>
+  <li><em>"Show me payment trends for last quarter"</em>: Context for decision-making</li>
 </ul>
 
 <p>This turns the agent from a Q&A bot into a <strong>workflow guide</strong> that helps users discover capabilities they didn't know existed.</p>
 
 <h2>9. API Design: Two Flavors of Invocation</h2>
 
-<p>We expose two endpoints to serve different client needs—because sometimes you want the whole response at once, and sometimes you want to show progress.</p>
+<p>We expose two endpoints to serve different client needs, because sometimes you want the whole response at once, and sometimes you want to show progress.</p>
 
 <pre><code class="language-python">@app.post("/chatbot/invoke", response_model=Output)
 async def invoke_chatbot(input: Input):
@@ -1708,8 +1898,8 @@ async def invoke_chatbot_stream(input: Input):
 <p><strong>When to use which:</strong></p>
 
 <ul>
-  <li><code>/invoke</code> — Background automations, webhooks, anywhere you just need the final answer</li>
-  <li><code>/invoke_stream</code> — Interactive UI, where users are watching and waiting</li>
+  <li><code>/invoke</code>: Background automations, webhooks, anywhere you just need the final answer</li>
+  <li><code>/invoke_stream</code>: Interactive UI, where users are watching and waiting</li>
 </ul>
 
 <pre><code class="language-python">class Input(BaseModel):
@@ -1900,10 +2090,10 @@ export const ARCopilotChat = () => {
 <p><strong>Why we chose assistant-ui over building custom:</strong></p>
 
 <ul>
-  <li><strong>Time to market</strong> — Chat UI in hours, not weeks. We focused our engineering time on the agent logic that actually differentiates our product.</li>
-  <li><strong>Streaming "just works"</strong> — SSE handling, progressive rendering, all the edge cases around interrupted streams—handled.</li>
-  <li><strong>Battle-tested state management</strong> — Multi-turn conversations, message editing, retries. The edge cases you don't think about until they bite you.</li>
-  <li><strong>LangChain-native</strong> — Designed for exactly our use case. The integration was trivial.</li>
+  <li><strong>Time to market</strong>: Chat UI in hours, not weeks. We focused our engineering time on the agent logic that actually differentiates our product.</li>
+  <li><strong>Streaming "just works"</strong>: SSE handling, progressive rendering, all the edge cases around interrupted streams. Handled.</li>
+  <li><strong>Battle-tested state management</strong>: Multi-turn conversations, message editing, retries. The edge cases you don't think about until they bite you.</li>
+  <li><strong>LangChain-native</strong>: Designed for exactly our use case. The integration was trivial.</li>
 </ul>
 
 <p>We wired up our <code>visual_explainer</code> metadata to show tool execution status, and the follow-up suggestions render as clickable chips below each response. <strong>The result:</strong> a polished, ChatGPT-quality UX that our enterprise customers expected.</p>
@@ -1913,17 +2103,17 @@ export const ARCopilotChat = () => {
 <p>After months of iteration, here's what we wish we'd known from day one:</p>
 
 <ol>
-  <li><strong>Tool descriptions are prompts in disguise</strong> — We spent more time refining tool descriptions than almost any other part of the system. A vague description like "Get invoice data" led to constant misuse. "Get invoice details by invoice number. Returns amount, due date, payment status, and buyer info. Use when user asks about a specific invoice" worked far better.</li>
-  <li><strong>Dual-stream memory is non-negotiable</strong> — Separating chat history from tool outputs sounds like over-engineering until your context window fills up with JSON and the agent starts forgetting the conversation.</li>
-  <li><strong>Visual feedback is a force multiplier</strong> — "Getting customer information..." costs nothing to implement but transforms perceived performance. Users wait happily when they can see progress.</li>
-  <li><strong>Domain terminology will burn you</strong> — "Overdue" vs "outstanding" vs "late payment" mean specific things in AR. We learned this the hard way when an early version sent dunning emails to customers who weren't actually late.</li>
-  <li><strong>Workflow guardrails prevent disasters</strong> — Without explicit rules like "get buyer email before drafting," the agent would confidently generate emails with [PLACEHOLDER] links. Embarrassing.</li>
-  <li><strong>Temperature 0.3 is the sweet spot</strong> — For financial data, you need consistency. But go too low and responses feel robotic. 0.3 threads the needle.</li>
+  <li><strong>Tool descriptions are prompts in disguise</strong>: We spent more time refining tool descriptions than almost any other part of the system. A vague description like "Get invoice data" led to constant misuse. "Get invoice details by invoice number. Returns amount, due date, payment status, and buyer info. Use when user asks about a specific invoice" worked far better.</li>
+  <li><strong>Dual-stream memory is non-negotiable</strong>: Separating chat history from tool outputs sounds like over-engineering until your context window fills up with JSON and the agent starts forgetting the conversation.</li>
+  <li><strong>Visual feedback is a force multiplier</strong>: "Getting customer information..." costs nothing to implement but transforms perceived performance. Users wait happily when they can see progress.</li>
+  <li><strong>Domain terminology will burn you</strong>: "Overdue" vs "outstanding" vs "late payment" mean specific things in AR. We learned this the hard way when an early version sent dunning emails to customers who weren't actually late.</li>
+  <li><strong>Workflow guardrails prevent disasters</strong>: Without explicit rules like "get buyer email before drafting," the agent would confidently generate emails with [PLACEHOLDER] links. Embarrassing.</li>
+  <li><strong>Temperature 0.3 is the sweet spot</strong>: For financial data, you need consistency. But go too low and responses feel robotic. 0.3 threads the needle.</li>
 </ol>
 
 <h2>Wrapping Up</h2>
 
-<p>Building an AI copilot for accounts receivable wasn't about bolting ChatGPT onto a dashboard. It required <strong>deep integration</strong>—understanding the domain, respecting the workflows, and building trust with finance teams who (rightfully) don't want AI making autonomous decisions about money.</p>
+<p>Building an AI copilot for accounts receivable wasn't about bolting ChatGPT onto a dashboard. It required <strong>deep integration</strong>: understanding the domain, respecting the workflows, and building trust with finance teams who (rightfully) don't want AI making autonomous decisions about money.</p>
 
 <p><strong>The architecture that made it work:</strong></p>
 
@@ -1936,13 +2126,13 @@ export const ARCopilotChat = () => {
   <li>assistant-ui for production-ready frontend</li>
 </ul>
 
-<p><strong>The result:</strong> Finance teams can now ask "Who are my top 5 overdue customers?" and get an answer in seconds—complete with the option to draft reminder emails, create payment links, or add them to a dunning sequence. All through natural conversation.</p>
+<p><strong>The result:</strong> Finance teams can now ask "Who are my top 5 overdue customers?" and get an answer in seconds, complete with the option to draft reminder emails, create payment links, or add them to a dunning sequence. All through natural conversation.</p>
 
 <p>That's the promise of AI copilots: not replacing humans, but giving them superpowers.</p>
 
 <hr />
 
-<p><em>These patterns aren't AR-specific. If you're building AI agents for any domain—legal, healthcare, logistics—the architecture translates.</em></p>
+<p><em>These patterns aren't AR-specific. If you're building AI agents for any domain (legal, healthcare, logistics), the architecture translates.</em></p>
 
 <p>Building something similar? I'd love to hear about it. Reach out on LinkedIn or check out <a href="https://delfyn.co" target="_blank">delfyn.co</a>.</p>
     `.trim(),
@@ -1966,9 +2156,9 @@ export const ARCopilotChat = () => {
 
 <p>Here's a conversation that happens in every B2B sales cycle: <em>"We love your product, but our IT policy requires SSO. Do you support Azure AD?"</em></p>
 
-<p>If your answer is "not yet," you just lost the deal. Enterprise companies don't compromise on identity management—it's the foundation of their security posture. <strong>No SSO, no contract.</strong></p>
+<p>If your answer is "not yet," you just lost the deal. Enterprise companies don't compromise on identity management. It's the foundation of their security posture. <strong>No SSO, no contract.</strong></p>
 
-<p>We faced this reality head-on. Our multi-tenant platform needed to support whatever identity provider each customer used—Azure AD, Okta, OneLogin, Google Workspace, custom SAML setups—without building bespoke integrations for each one.</p>
+<p>We faced this reality head-on. Our multi-tenant platform needed to support whatever identity provider each customer used (Azure AD, Okta, OneLogin, Google Workspace, custom SAML setups) without building bespoke integrations for each one.</p>
 
 <p>This post breaks down how we built a flexible SSO system that handles both OAuth2 and SAML2 protocols, enabling us to say "yes" to every enterprise prospect regardless of their IdP.</p>
 
@@ -1977,10 +2167,10 @@ export const ARCopilotChat = () => {
 <p>If you've never dealt with enterprise SSO, here's the reality check:</p>
 
 <ul>
-  <li><strong>Protocol wars</strong> — Half your customers use OAuth2/OIDC (Azure AD, Google), half use SAML2 (Okta, OneLogin, ADFS). You need both.</li>
-  <li><strong>Security requirements vary</strong> — Some demand PKCE (Proof Key for Code Exchange), others have legacy flows you have to support.</li>
-  <li><strong>Platform fragmentation</strong> — Mobile apps need custom URL schemes (<code>myapp://callback</code>), web apps need HTTPS redirects. Same customer, different flows.</li>
-  <li><strong>Environment sprawl</strong> — "Can we test SSO in staging before enabling production?" Yes, you need that.</li>
+  <li><strong>Protocol wars</strong>: Half your customers use OAuth2/OIDC (Azure AD, Google), half use SAML2 (Okta, OneLogin, ADFS). You need both.</li>
+  <li><strong>Security requirements vary</strong>: Some demand PKCE (Proof Key for Code Exchange), others have legacy flows you have to support.</li>
+  <li><strong>Platform fragmentation</strong>, mobile apps need custom URL schemes (<code>myapp://callback</code>), web apps need HTTPS redirects. Same customer, different flows.</li>
+  <li><strong>Environment sprawl</strong>: "Can we test SSO in staging before enabling production?" Yes, you need that.</li>
 </ul>
 
 <p>We needed architecture that could absorb all this complexity without becoming unmaintainable.</p>
@@ -2016,8 +2206,8 @@ export const ARCopilotChat = () => {
 <p>A single <code>kind</code> attribute switches between protocols:</p>
 
 <ul>
-  <li><strong>oauth2</strong> — For OIDC providers (Azure AD, Google, Auth0). Modern, well-documented, what you want if you have a choice.</li>
-  <li><strong>saml2</strong> — For enterprise SAML (Okta, OneLogin, ADFS). Legacy but ubiquitous in enterprises. You will encounter it.</li>
+  <li><strong>oauth2</strong>: For OIDC providers (Azure AD, Google, Auth0). Modern, well-documented, what you want if you have a choice.</li>
+  <li><strong>saml2</strong>: For enterprise SAML (Okta, OneLogin, ADFS). Legacy but ubiquitous in enterprises. You will encounter it.</li>
 </ul>
 
 <p><strong>Why this matters:</strong> When a customer says "We use Okta," we don't care whether they've configured it for OIDC or SAML. Either works.</p>
@@ -2027,9 +2217,9 @@ export const ARCopilotChat = () => {
 <p>Every SSO config is scoped to an environment:</p>
 
 <ul>
-  <li><code>production</code> — The real deal. Locked down.</li>
-  <li><code>staging</code> — Customer IT tests their IdP integration here first.</li>
-  <li><code>development</code> / <code>test</code> — Internal use and CI pipelines.</li>
+  <li><code>production</code>: The real deal. Locked down.</li>
+  <li><code>staging</code>: Customer IT tests their IdP integration here first.</li>
+  <li><code>development</code> / <code>test</code>: Internal use and CI pipelines.</li>
 </ul>
 
 <p><strong>The lesson we learned the hard way:</strong> Customers <em>will</em> misconfigure SSO on their first attempt. Giving them a safe sandbox to experiment in prevents embarrassing production lockouts.</p>
@@ -2039,9 +2229,9 @@ export const ARCopilotChat = () => {
 <p>Not every IdP supports every security feature. We made them configurable:</p>
 
 <ul>
-  <li><strong>PKCE</strong> — Prevents authorization code theft. Essential for mobile, recommended everywhere. Toggle it on if the IdP supports it.</li>
-  <li><strong>State parameter</strong> — CSRF protection. Always enabled in production, but useful to disable during debugging.</li>
-  <li><strong>Response mode</strong> — Some IdPs return tokens in the URL fragment, others in query params. We adapt.</li>
+  <li><strong>PKCE</strong>: Prevents authorization code theft. Essential for mobile, recommended everywhere. Toggle it on if the IdP supports it.</li>
+  <li><strong>State parameter</strong>: CSRF protection. Always enabled in production, but useful to disable during debugging.</li>
+  <li><strong>Response mode</strong>: Some IdPs return tokens in the URL fragment, others in query params. We adapt.</li>
 </ul>
 
 <h3>4. Platform-Aware Redirects</h3>
@@ -2065,7 +2255,7 @@ oauth2_mobile_redirect_url: myapp://oauth/callback</code></pre>
 
 <p><strong>The key insight:</strong> The authorization code is useless without the client secret (which stays on your server). Even if someone intercepts the code, they can't exchange it for tokens.</p>
 
-<p>With PKCE, we add another layer—a cryptographic proof that the token request comes from the same client that started the flow:</p>
+<p>With PKCE, we add another layer, a cryptographic proof that the token request comes from the same client that started the flow:</p>
 
 <pre><code class="language-ruby">def self.generate_pkce
   pkce_challenge = PkceChallenge.challenge(char_length: 58)
@@ -2088,12 +2278,12 @@ end</code></pre>
 <p><strong>What we store for each SAML integration:</strong></p>
 
 <ul>
-  <li><code>saml_idp_metadata</code> — The full XML metadata blob from the IdP. Everything we need is in here.</li>
-  <li><code>saml_idp_entity_id</code> — The IdP's unique identifier. Used to verify assertions came from the right source.</li>
-  <li><code>saml_sso_url</code> — Where we redirect users to authenticate.</li>
-  <li><code>saml_certificate</code> — Public cert for signature verification. <strong>Critical:</strong> Never trust an unsigned assertion.</li>
-  <li><code>saml_consumer_service_url</code> — Our ACS endpoint. Where the IdP posts the assertion after auth.</li>
-  <li><code>saml_name_identifier_format</code> — How user IDs are formatted (email, persistent ID, etc.).</li>
+  <li><code>saml_idp_metadata</code>: The full XML metadata blob from the IdP. Everything we need is in here.</li>
+  <li><code>saml_idp_entity_id</code>: The IdP's unique identifier. Used to verify assertions came from the right source.</li>
+  <li><code>saml_sso_url</code>: Where we redirect users to authenticate.</li>
+  <li><code>saml_certificate</code>, public cert for signature verification. <strong>Critical:</strong> Never trust an unsigned assertion.</li>
+  <li><code>saml_consumer_service_url</code>: Our ACS endpoint. Where the IdP posts the assertion after auth.</li>
+  <li><code>saml_name_identifier_format</code>: How user IDs are formatted (email, persistent ID, etc.).</li>
 </ul>
 
 <p>The flow kicks off from a simple endpoint:</p>
@@ -2111,10 +2301,10 @@ end</code></pre>
 <p><strong>Our solution:</strong> Configurable attribute keys per integration.</p>
 
 <ul>
-  <li><code>oauth2_email_key</code> — Where to find the email. Could be <code>email</code>, <code>mail</code>, <code>upn</code>, or <code>preferred_username</code>.</li>
-  <li><code>oauth2_firstname_key</code> — First name location: <code>given_name</code>, <code>firstName</code>, <code>first_name</code>...</li>
-  <li><code>oauth2_last_name_key</code> — Same story: <code>family_name</code>, <code>lastName</code>, <code>surname</code>...</li>
-  <li><code>oauth2_user_division_key</code> — Optional org unit mapping for customers who want role assignment based on department.</li>
+  <li><code>oauth2_email_key</code>: Where to find the email. Could be <code>email</code>, <code>mail</code>, <code>upn</code>, or <code>preferred_username</code>.</li>
+  <li><code>oauth2_firstname_key</code>, first name location: <code>given_name</code>, <code>firstName</code>, <code>first_name</code>...</li>
+  <li><code>oauth2_last_name_key</code>, same story: <code>family_name</code>, <code>lastName</code>, <code>surname</code>...</li>
+  <li><code>oauth2_user_division_key</code>: Optional org unit mapping for customers who want role assignment based on department.</li>
 </ul>
 
 <p><strong>The payoff:</strong> When a customer says "Our IdP returns the email in a custom field called <code>corporate_email</code>," we update one config value. No code changes, no deployments.</p>
@@ -2198,9 +2388,9 @@ end</code></pre>
 
 <p><strong>Note the key decisions:</strong></p>
 <ul>
-  <li><code>pkce_layer: true</code> — Azure AD supports it, so we enable it. Extra security at no cost.</li>
-  <li><code>environment: :development</code> — Customer tests here first, then we clone to production.</li>
-  <li>Separate web and mobile redirect URLs — Same IdP config, different callback handling.</li>
+  <li><code>pkce_layer: true</code>: Azure AD supports it, so we enable it. Extra security at no cost.</li>
+  <li><code>environment: :development</code>: Customer tests here first, then we clone to production.</li>
+  <li>Separate web and mobile redirect URLs: Same IdP config, different callback handling.</li>
 </ul>
 
 <h2>Lessons from the Trenches</h2>
@@ -2214,7 +2404,7 @@ end</code></pre>
 <p>A customer will misconfigure SSO. When they do, you want them locked out of <em>staging</em>, not production. The environment enum paid for itself after the first prevented incident.</p>
 
 <h3>3. Mobile SSO is a Different Beast</h3>
-<p>Custom URL schemes, deep linking, secure storage for tokens—mobile has its own rules. Plan for separate redirect URIs from day one, or you'll be refactoring later.</p>
+<p>Custom URL schemes, deep linking, secure storage for tokens: mobile has its own rules. Plan for separate redirect URIs from day one, or you'll be refactoring later.</p>
 
 <h3>4. Documentation is Customer Success</h3>
 <p>We wrote step-by-step guides for Azure AD, Okta, Google Workspace, and OneLogin. Result: most customers configure SSO themselves. Support load dropped, sales velocity increased.</p>
@@ -2237,11 +2427,11 @@ end</code></pre>
 <h2>Key Takeaways</h2>
 
 <ul>
-  <li><strong>Support both protocols</strong> — OAuth2/OIDC for modern IdPs, SAML2 for enterprise legacy. You'll need both.</li>
-  <li><strong>Make everything configurable</strong> — Attribute mapping, redirect URLs, security toggles. If you hardcode it, a customer will need it different.</li>
-  <li><strong>Environment isolation is not optional</strong> — Customers will misconfigure SSO. Give them a safe place to experiment.</li>
-  <li><strong>Mobile and web are different worlds</strong> — Plan for separate redirect URIs from the start.</li>
-  <li><strong>Security layers should be toggleable</strong> — PKCE, state parameters, response modes. Support them all, enable what each IdP can handle.</li>
+  <li><strong>Support both protocols</strong>: OAuth2/OIDC for modern IdPs, SAML2 for enterprise legacy. You'll need both.</li>
+  <li><strong>Make everything configurable</strong>: Attribute mapping, redirect URLs, security toggles. If you hardcode it, a customer will need it different.</li>
+  <li><strong>Environment isolation is not optional</strong>: Customers will misconfigure SSO. Give them a safe place to experiment.</li>
+  <li><strong>Mobile and web are different worlds</strong>: Plan for separate redirect URIs from the start.</li>
+  <li><strong>Security layers should be toggleable</strong>: PKCE, state parameters, response modes. Support them all, enable what each IdP can handle.</li>
 </ul>
 
 <p>SSO is table stakes for enterprise sales. Build it once, build it right, and stop losing deals to a checkbox on procurement checklists.</p>
@@ -2263,7 +2453,7 @@ end</code></pre>
     content: `
 <h2>Introduction</h2>
 
-<p>Predicting future revenue and expenses is critical for any B2B business. But single-model forecasting approaches often fail when faced with real-world data irregularities—seasonal spikes, outliers, and missing data points.</p>
+<p>Predicting future revenue and expenses is critical for any B2B business. But single-model forecasting approaches often fail when faced with real-world data irregularities: seasonal spikes, outliers, and missing data points.</p>
 
 <p>In this post, I'll walk you through how we built an <strong>ensemble forecasting system</strong> in Ruby on Rails that combines five different statistical models to generate more accurate and reliable predictions. This system powers our cash flow forecasting feature, helping businesses anticipate their financial future.</p>
 
@@ -2272,10 +2462,10 @@ end</code></pre>
 <p>Most tutorials show you how to implement a simple moving average or linear regression. But in production, you'll quickly discover:</p>
 
 <ul>
-  <li><strong>Linear trends miss seasonality</strong> — Q4 revenue spikes won't be captured</li>
-  <li><strong>Moving averages lag behind</strong> — They react slowly to trend changes</li>
-  <li><strong>Seasonal models fail with short data</strong> — You need 12+ months of history</li>
-  <li><strong>All models struggle with outliers</strong> — One bad month skews everything</li>
+  <li><strong>Linear trends miss seasonality</strong>: Q4 revenue spikes won't be captured</li>
+  <li><strong>Moving averages lag behind</strong>: They react slowly to trend changes</li>
+  <li><strong>Seasonal models fail with short data</strong>: You need 12+ months of history</li>
+  <li><strong>All models struggle with outliers</strong>: One bad month skews everything</li>
 </ul>
 
 <p>Our solution? <strong>Combine them all</strong> and let each model vote on the forecast, weighted by its confidence.</p>
@@ -2826,12 +3016,12 @@ end</code></pre>
 <h2>Key Takeaways</h2>
 
 <ol>
-  <li><strong>No single model is best</strong> — Ensemble approaches consistently outperform individual models in production</li>
-  <li><strong>Weight by confidence</strong> — Let models that fit your data better have more influence</li>
-  <li><strong>Clean your data first</strong> — Outlier removal and gap filling are crucial</li>
-  <li><strong>Quantify uncertainty</strong> — Monte Carlo simulation gives you probability distributions, not just point estimates</li>
-  <li><strong>Apply constraints</strong> — Business logic should prevent impossible forecasts</li>
-  <li><strong>Expose the internals</strong> — Returning individual model predictions helps with debugging and trust</li>
+  <li><strong>No single model is best</strong>: Ensemble approaches consistently outperform individual models in production</li>
+  <li><strong>Weight by confidence</strong>: Let models that fit your data better have more influence</li>
+  <li><strong>Clean your data first</strong>: Outlier removal and gap filling are crucial</li>
+  <li><strong>Quantify uncertainty</strong>: Monte Carlo simulation gives you probability distributions, not just point estimates</li>
+  <li><strong>Apply constraints</strong>: Business logic should prevent impossible forecasts</li>
+  <li><strong>Expose the internals</strong>: Returning individual model predictions helps with debugging and trust</li>
 </ol>
 
 <h2>Performance Considerations</h2>
@@ -2839,10 +3029,10 @@ end</code></pre>
 <p>This service processes ~2200 lines of Ruby for a single forecast. For production:</p>
 
 <ul>
-  <li><strong>Cache results</strong> — Forecasts don't change minute-to-minute</li>
-  <li><strong>Background jobs</strong> — Generate forecasts async with Sidekiq</li>
-  <li><strong>Limit history</strong> — 2-3 years of data is usually sufficient</li>
-  <li><strong>Index your queries</strong> — The <code>get_historical_*_data</code> methods hit the database</li>
+  <li><strong>Cache results</strong>: Forecasts don't change minute-to-minute</li>
+  <li><strong>Background jobs</strong>: Generate forecasts async with Sidekiq</li>
+  <li><strong>Limit history</strong>: 2-3 years of data is usually sufficient</li>
+  <li><strong>Index your queries</strong>: The <code>get_historical_*_data</code> methods hit the database</li>
 </ul>
 
 <h2>What's Next?</h2>

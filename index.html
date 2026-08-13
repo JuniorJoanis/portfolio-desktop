@@ -335,6 +335,41 @@
         border-color: rgba(28,25,23,0.1);
         margin: 2rem 0;
       }
+      /* Blog tables */
+      .prose .table-wrap {
+        overflow-x: auto;
+        margin: 1.75rem 0;
+        border: 1px solid rgba(28,25,23,0.12);
+        border-radius: 0.75rem;
+        background: #FFFFFF;
+      }
+      .prose table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+        line-height: 1.5;
+        margin: 0;
+      }
+      .prose thead th {
+        background: rgba(28,25,23,0.04);
+        color: #1C1917;
+        font-weight: 600;
+        text-align: left;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid rgba(28,25,23,0.12);
+        white-space: nowrap;
+      }
+      .prose tbody td {
+        padding: 0.7rem 1rem;
+        border-bottom: 1px solid rgba(28,25,23,0.08);
+        vertical-align: top;
+      }
+      .prose tbody tr:last-child td {
+        border-bottom: none;
+      }
+      .prose tbody tr:nth-child(even) td {
+        background: rgba(28,25,23,0.02);
+      }
       
       /* Line clamp utility */
       .line-clamp-2 {
